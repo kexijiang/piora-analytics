@@ -15,6 +15,7 @@
 | Piora 既有相关回归 | prompt-run-registry、session-control-store、model-stall-guard、task-timing、session-message-router、room-chat-dispatch；50 项既有相关测试，加新增 13 项共 63 项通过，不代替全套 CI |
 | Piora 类型检查 | 根与 desktop TypeScript 无错误；没有运行 next build 或构建本地安装包 |
 | Windows 原生夹具 | 真实 Electron 45、SQLite WAL、异步 DPAPI 加解密、powerMonitor；锁屏/休眠事件为注入，不是实际 OS 操作 |
+| Piora 开发桌面 UI | 实际设置导航、未配置状态、刷新/重载；API 200、无 renderer error。两次启动被 worktree 共享依赖路径阻断，按本地 Next.js 文档临时配置 additional root 后复测通过，配置已恢复 |
 | 依赖安全查询 | 官方 npm registry 的生产依赖 audit：0 项漏洞；默认镜像不提供 audit API，因此改用官方接口 |
 
 调试过程中修复：桌面 CommonJS/ESM 边界、暂停后 journal 回填、健康事件过早确认、解锁尾段、重复模型/文件业务 ID、分页路由隔离、真实页面参数校验、部门创建后缺少可见展示。失败后重跑对应场景，不能将首次失败算作通过。
@@ -39,3 +40,5 @@ npm run test:ui
 ## 尚未验证
 
 GitHub CI 状态以相应提交的 Actions 为准，本文件不预报未来结果。没有做 500 台容量压测、生产数据库备份恢复、Linux 容器/TLS 部署、真实付费模型逐供应商对账、Windows 安装包升级或员工实机多日试点。不要把本地夹具通过解释为生产部署完成。
+
+后端初始提交 8ad50fd 的 [GitHub Actions](https://github.com/kexijiang/piora-analytics/actions/runs/43455329174) 已通过 quality、test:database、test:api 三项任务，包括 Linux PostgreSQL 18 与 Chromium 浏览器复测。后续提交需查看其各自工作流结果。

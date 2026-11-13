@@ -50,10 +50,13 @@ API/Worker 与客户端事件契约在后端仓库维护。客户端只上传统
 ~~~powershell
 node --test lib/analytics-telemetry.test.mjs lib/prompt-run-registry.test.mjs lib/session-control-store.test.mjs
 node scripts/test-organization-analytics.mjs
+node scripts/test-organization-analytics-ui.mjs
 node_modules/.bin/tsc --noEmit
 node_modules/.bin/tsc --noEmit -p desktop/tsconfig.json
 ~~~
 
 新测试覆盖持久/幂等/ACK、队列限制、抖动、失败补传、暂停、未知 Token、群聊去重、provider 观察器、真实文件前后 diff、重启未知终态；原生测试运行真实 Electron、SQLite 和 Windows DPAPI，电源事件是注入夹具。没有把它描述为真实睡眠/锁屏操作或安装包验收。
+
+另已在真实开发 Electron 中通过设置导航、未配置状态、刷新和重载检查，未发生 renderer error。报告：.verification/desktop-e2e-mCYUsq/report.md。前两次启动因 worktree 共享依赖超出 Turbopack root 而中断；成功复测临时按当前 Next.js 文档配置 additional root 指向共享依赖，结束后已恢复 next.config.ts。没有修改主工作目录或在其中运行开发服务。
 
 本次不在主开发目录运行 next build、不构建发布包、不启用现有用户统计。上线仍需部署后端、企业安全配置、5 台试点及 GitHub Actions Windows 发布。
