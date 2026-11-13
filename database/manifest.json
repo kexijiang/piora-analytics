@@ -1,0 +1,150 @@
+{
+  "postgres_major": 18,
+  "tables": [
+    {
+      "name": "organizations",
+      "columns": 4,
+      "description": "v1 单组织，结构保留租户隔离"
+    },
+    {
+      "name": "departments",
+      "columns": 6,
+      "description": "部门维度，不物理删除历史部门"
+    },
+    {
+      "name": "employees",
+      "columns": 7,
+      "description": "管理员确认的人员；用户名不作为主键"
+    },
+    {
+      "name": "employee_department_periods",
+      "columns": 8,
+      "description": "部门归属生效区间；不重叠"
+    },
+    {
+      "name": "installations",
+      "columns": 15,
+      "description": "Windows 安装实例，用户名仅供匹配"
+    },
+    {
+      "name": "installation_bindings",
+      "columns": 8,
+      "description": "一台安装实例在任一天最多归属一个员工"
+    },
+    {
+      "name": "admin_accounts",
+      "columns": 10,
+      "description": "后台账号，员工无需登录"
+    },
+    {
+      "name": "admin_sessions",
+      "columns": 9,
+      "description": "随机服务端会话；不保存 cookie 明文"
+    },
+    {
+      "name": "enrollment_keys",
+      "columns": 10,
+      "description": "短期、有次数上限的组织注册凭证"
+    },
+    {
+      "name": "installation_credentials",
+      "columns": 9,
+      "description": "安装鉴权凭证，轮换时双凭证过渡"
+    },
+    {
+      "name": "idempotency_keys",
+      "columns": 8,
+      "description": "管理写请求 24 小时响应重放，不存明文秘密"
+    },
+    {
+      "name": "org_settings",
+      "columns": 5,
+      "description": "版本化同步与保留策略"
+    },
+    {
+      "name": "event_receipts",
+      "columns": 9,
+      "description": "跨月去重账本；与事件同事务写入"
+    },
+    {
+      "name": "telemetry_events",
+      "columns": 7,
+      "description": "按 received_at 月分区的原始允许列表事件"
+    },
+    {
+      "name": "aggregation_jobs",
+      "columns": 12,
+      "description": "持久工作队列；租约 + SKIP LOCKED"
+    },
+    {
+      "name": "app_launches",
+      "columns": 6,
+      "description": "冷启动事实，仅保留明细窗口"
+    },
+    {
+      "name": "activity_intervals",
+      "columns": 7,
+      "description": "明细窗口内的分钟活动事实"
+    },
+    {
+      "name": "queries",
+      "columns": 10,
+      "description": "逻辑提交事实；状态按 revision 更新"
+    },
+    {
+      "name": "runs",
+      "columns": 12,
+      "description": "任务事实；未知耗时保留空值"
+    },
+    {
+      "name": "model_calls",
+      "columns": 19,
+      "description": "每次实际供应商调用；含重试/辅助调用"
+    },
+    {
+      "name": "file_changes",
+      "columns": 16,
+      "description": "可靠文件工具操作事实，不保存文件路径/代码"
+    },
+    {
+      "name": "installation_daily_metrics",
+      "columns": 31,
+      "description": "24 月可重映射的安装×日期×来源×版本汇总"
+    },
+    {
+      "name": "installation_daily_activity",
+      "columns": 7,
+      "description": "24 月保留的压缩区间；跨安装计算员工并集"
+    },
+    {
+      "name": "installation_daily_models",
+      "columns": 18,
+      "description": "24 月模型统计"
+    },
+    {
+      "name": "daily_query_models",
+      "columns": 8,
+      "description": "保留 24 月的模型相关 Query 去重键；无原文"
+    },
+    {
+      "name": "daily_file_keys",
+      "columns": 13,
+      "description": "24 月文件去重与语言统计；跨日 files_touched 不求和"
+    },
+    {
+      "name": "data_quality_daily",
+      "columns": 6,
+      "description": "客户端丢失、拒绝、未知用量的可见缺口"
+    },
+    {
+      "name": "export_jobs",
+      "columns": 12,
+      "description": "异步 CSV 导出；只读用户可导出其可见数据"
+    },
+    {
+      "name": "audit_logs",
+      "columns": 11,
+      "description": "管理操作审计，无密码、原始设备凭证"
+    }
+  ]
+}

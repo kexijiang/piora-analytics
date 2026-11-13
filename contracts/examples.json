@@ -1,0 +1,1561 @@
+[
+  {
+    "name": "login request",
+    "schema": "LoginInput",
+    "value": {
+      "username": "示例值",
+      "password": "示例值示例值示例值示例值"
+    }
+  },
+  {
+    "name": "login response",
+    "schema": "loginResponse",
+    "value": {
+      "data": {
+        "user": {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "username": "示例值",
+          "display_name": "示例值",
+          "role": "admin",
+          "status": "active",
+          "revision": 0,
+          "must_change_password": false
+        },
+        "csrf_token": "示例值",
+        "expires_at": "2026-11-13T02:00:00.000Z"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "logout response",
+    "schema": "logoutResponse",
+    "value": {
+      "data": {
+        "ok": false
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "session response",
+    "schema": "sessionResponse",
+    "value": {
+      "data": {
+        "user": {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "username": "示例值",
+          "display_name": "示例值",
+          "role": "admin",
+          "status": "active",
+          "revision": 0,
+          "must_change_password": false
+        },
+        "csrf_token": "示例值",
+        "expires_at": "2026-11-13T02:00:00.000Z"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "changePassword request",
+    "schema": "PasswordInput",
+    "value": {
+      "current_password": "示例值",
+      "new_password": "示例值示例值示例值示例值"
+    }
+  },
+  {
+    "name": "changePassword response",
+    "schema": "changePasswordResponse",
+    "value": {
+      "data": {
+        "ok": false
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "registerInstallation request",
+    "schema": "RegisterInput",
+    "value": {
+      "registration_id": "10000000-0000-4000-8000-000000000001",
+      "installation_id": "10000000-0000-4000-8000-000000000001",
+      "credential": {
+        "credential_id": "10000000-0000-4000-8000-000000000001",
+        "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "windows_username": "示例值",
+      "device_label": "示例值",
+      "app_version": "示例值",
+      "sdk_version": "示例值",
+      "protocol_version": "1.0",
+      "capabilities": []
+    }
+  },
+  {
+    "name": "registerInstallation response",
+    "schema": "registerInstallationResponse",
+    "value": {
+      "data": {
+        "installation_id": "10000000-0000-4000-8000-000000000001",
+        "status": "active",
+        "organization_name": "示例值",
+        "credential_id": "10000000-0000-4000-8000-000000000001",
+        "credential_expires_at": "2026-11-13T02:00:00.000Z",
+        "policy": {
+          "version": 0,
+          "enabled": false,
+          "interval_min_seconds": 1500,
+          "interval_max_seconds": 2100,
+          "initial_delay_min_seconds": 60,
+          "initial_delay_max_seconds": 300,
+          "reconnect_min_seconds": 120,
+          "reconnect_max_seconds": 600,
+          "max_batch_events": 500,
+          "max_batch_bytes": 262144,
+          "queue_max_days": 30,
+          "queue_max_bytes": 268435456
+        }
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "rotateCredential request",
+    "schema": "RotateInput",
+    "value": {
+      "rotation_id": "10000000-0000-4000-8000-000000000001",
+      "next_credential": {
+        "credential_id": "10000000-0000-4000-8000-000000000001",
+        "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      }
+    }
+  },
+  {
+    "name": "rotateCredential response",
+    "schema": "rotateCredentialResponse",
+    "value": {
+      "data": {
+        "credential_id": "10000000-0000-4000-8000-000000000001",
+        "expires_at": "2026-11-13T02:00:00.000Z",
+        "previous_valid_until": "2026-11-13T02:00:00.000Z"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "ingestBatch request",
+    "schema": "BatchInput",
+    "value": {
+      "batch_id": "10000000-0000-4000-8000-000000000001",
+      "protocol_version": "1.0",
+      "client_sent_at": "2026-11-13T02:00:00.000Z",
+      "policy_version": 0,
+      "events": [
+        {
+          "event_id": "10000000-0000-4000-8000-000000000001",
+          "event_seq": "0",
+          "source_key": "示例值",
+          "event_type": "desktop.started",
+          "occurred_at": "2026-11-13T02:00:00.000Z",
+          "app_launch_id": "10000000-0000-4000-8000-000000000001",
+          "app_version": "示例值",
+          "payload": {
+            "reason": "manual"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "ingestBatch response",
+    "schema": "ingestBatchResponse",
+    "value": {
+      "data": {
+        "accepted_event_ids": [],
+        "duplicate_event_ids": [],
+        "rejected_events": [],
+        "retry_after_seconds": null,
+        "policy": null,
+        "credential_rotation_due": false
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "reportoverview response",
+    "schema": "reportoverviewResponse",
+    "value": {
+      "data": {
+        "confirmed_employees": "0",
+        "active_employees": "0",
+        "unconfirmed_installations": "0",
+        "metrics": {
+          "queries": "0",
+          "completed_queries": "0",
+          "failed_queries": "0",
+          "cancelled_queries": "0",
+          "interrupted_queries": "0",
+          "pending_queries": "0",
+          "opens": "0",
+          "launches": "0",
+          "runtime_ms": "0",
+          "active_ms": "0",
+          "task_ms": null,
+          "unknown_task_runs": "0",
+          "model_calls": "0",
+          "input_tokens": null,
+          "output_tokens": null,
+          "cache_read_tokens": null,
+          "cache_write_tokens": null,
+          "total_tokens": null,
+          "added_lines": "0",
+          "deleted_lines": "0",
+          "files_created": "0",
+          "files_touched": "0",
+          "file_operations": "0"
+        }
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z",
+        "timezone": "Asia/Shanghai",
+        "aggregation_as_of": null,
+        "from": "2026-11-13",
+        "to": "2026-11-13",
+        "coverage": {
+          "state": "complete",
+          "known_model_calls": "0",
+          "unknown_model_calls": "0",
+          "measured_file_operations": "0",
+          "unmeasured_file_operations": "0",
+          "last_received_at": null,
+          "data_through": null,
+          "warning_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "reporttrends response",
+    "schema": "reporttrendsResponse",
+    "value": {
+      "data": {
+        "items": []
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z",
+        "timezone": "Asia/Shanghai",
+        "aggregation_as_of": null,
+        "from": "2026-11-13",
+        "to": "2026-11-13",
+        "coverage": {
+          "state": "complete",
+          "known_model_calls": "0",
+          "unknown_model_calls": "0",
+          "measured_file_operations": "0",
+          "unmeasured_file_operations": "0",
+          "last_received_at": null,
+          "data_through": null,
+          "warning_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "reportemployeesdaily response",
+    "schema": "reportemployeesdailyResponse",
+    "value": {
+      "data": {
+        "items": [],
+        "next_cursor": null,
+        "total": "0"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z",
+        "timezone": "Asia/Shanghai",
+        "aggregation_as_of": null,
+        "from": "2026-11-13",
+        "to": "2026-11-13",
+        "coverage": {
+          "state": "complete",
+          "known_model_calls": "0",
+          "unknown_model_calls": "0",
+          "measured_file_operations": "0",
+          "unmeasured_file_operations": "0",
+          "last_received_at": null,
+          "data_through": null,
+          "warning_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "reportemployeesid response",
+    "schema": "reportemployeesidResponse",
+    "value": {
+      "data": {
+        "employee": {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "name": "示例值",
+          "employee_no": null,
+          "department_id": null,
+          "status": "active",
+          "installation_count": 0,
+          "revision": 0
+        },
+        "daily": [],
+        "installations": []
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z",
+        "timezone": "Asia/Shanghai",
+        "aggregation_as_of": null,
+        "from": "2026-11-13",
+        "to": "2026-11-13",
+        "coverage": {
+          "state": "complete",
+          "known_model_calls": "0",
+          "unknown_model_calls": "0",
+          "measured_file_operations": "0",
+          "unmeasured_file_operations": "0",
+          "last_received_at": null,
+          "data_through": null,
+          "warning_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "reportqueries response",
+    "schema": "reportqueriesResponse",
+    "value": {
+      "data": {
+        "items": [],
+        "next_cursor": null,
+        "total": "0"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z",
+        "timezone": "Asia/Shanghai",
+        "aggregation_as_of": null,
+        "from": "2026-11-13",
+        "to": "2026-11-13",
+        "coverage": {
+          "state": "complete",
+          "known_model_calls": "0",
+          "unknown_model_calls": "0",
+          "measured_file_operations": "0",
+          "unmeasured_file_operations": "0",
+          "last_received_at": null,
+          "data_through": null,
+          "warning_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "reportqueriesid response",
+    "schema": "reportqueriesidResponse",
+    "value": {
+      "data": {
+        "query": {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "installation_id": "10000000-0000-4000-8000-000000000001",
+          "employee_id": null,
+          "source": "chat",
+          "accepted_at": "2026-11-13T02:00:00.000Z",
+          "status": "accepted",
+          "revision": 0,
+          "run_ids": [],
+          "metrics": {
+            "queries": "0",
+            "completed_queries": "0",
+            "failed_queries": "0",
+            "cancelled_queries": "0",
+            "interrupted_queries": "0",
+            "pending_queries": "0",
+            "opens": "0",
+            "launches": "0",
+            "runtime_ms": "0",
+            "active_ms": "0",
+            "task_ms": null,
+            "unknown_task_runs": "0",
+            "model_calls": "0",
+            "input_tokens": null,
+            "output_tokens": null,
+            "cache_read_tokens": null,
+            "cache_write_tokens": null,
+            "total_tokens": null,
+            "added_lines": "0",
+            "deleted_lines": "0",
+            "files_created": "0",
+            "files_touched": "0",
+            "file_operations": "0"
+          },
+          "coverage": {
+            "state": "complete",
+            "known_model_calls": "0",
+            "unknown_model_calls": "0",
+            "measured_file_operations": "0",
+            "unmeasured_file_operations": "0",
+            "last_received_at": null,
+            "data_through": null,
+            "warning_codes": []
+          }
+        },
+        "calls": [],
+        "file_changes": [],
+        "truncated": false
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z",
+        "timezone": "Asia/Shanghai",
+        "aggregation_as_of": null,
+        "from": "2026-11-13",
+        "to": "2026-11-13",
+        "coverage": {
+          "state": "complete",
+          "known_model_calls": "0",
+          "unknown_model_calls": "0",
+          "measured_file_operations": "0",
+          "unmeasured_file_operations": "0",
+          "last_received_at": null,
+          "data_through": null,
+          "warning_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "reportqueriesidcalls response",
+    "schema": "reportqueriesidcallsResponse",
+    "value": {
+      "data": {
+        "items": [],
+        "next_cursor": null,
+        "total": "0"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z",
+        "timezone": "Asia/Shanghai",
+        "aggregation_as_of": null,
+        "from": "2026-11-13",
+        "to": "2026-11-13",
+        "coverage": {
+          "state": "complete",
+          "known_model_calls": "0",
+          "unknown_model_calls": "0",
+          "measured_file_operations": "0",
+          "unmeasured_file_operations": "0",
+          "last_received_at": null,
+          "data_through": null,
+          "warning_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "reportqueriesidfilechanges response",
+    "schema": "reportqueriesidfilechangesResponse",
+    "value": {
+      "data": {
+        "items": [],
+        "next_cursor": null,
+        "total": "0"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z",
+        "timezone": "Asia/Shanghai",
+        "aggregation_as_of": null,
+        "from": "2026-11-13",
+        "to": "2026-11-13",
+        "coverage": {
+          "state": "complete",
+          "known_model_calls": "0",
+          "unknown_model_calls": "0",
+          "measured_file_operations": "0",
+          "unmeasured_file_operations": "0",
+          "last_received_at": null,
+          "data_through": null,
+          "warning_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "reportmodels response",
+    "schema": "reportmodelsResponse",
+    "value": {
+      "data": {
+        "items": []
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z",
+        "timezone": "Asia/Shanghai",
+        "aggregation_as_of": null,
+        "from": "2026-11-13",
+        "to": "2026-11-13",
+        "coverage": {
+          "state": "complete",
+          "known_model_calls": "0",
+          "unknown_model_calls": "0",
+          "measured_file_operations": "0",
+          "unmeasured_file_operations": "0",
+          "last_received_at": null,
+          "data_through": null,
+          "warning_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "reportcode response",
+    "schema": "reportcodeResponse",
+    "value": {
+      "data": {
+        "items": []
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z",
+        "timezone": "Asia/Shanghai",
+        "aggregation_as_of": null,
+        "from": "2026-11-13",
+        "to": "2026-11-13",
+        "coverage": {
+          "state": "complete",
+          "known_model_calls": "0",
+          "unknown_model_calls": "0",
+          "measured_file_operations": "0",
+          "unmeasured_file_operations": "0",
+          "last_received_at": null,
+          "data_through": null,
+          "warning_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "reporthealth response",
+    "schema": "reporthealthResponse",
+    "value": {
+      "data": {
+        "installations": [],
+        "unbound_count": "0",
+        "stale_report_count": "0",
+        "rejected_events": "0",
+        "aggregation_lag_seconds": 0,
+        "warning_codes": []
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z",
+        "timezone": "Asia/Shanghai",
+        "aggregation_as_of": null,
+        "from": "2026-11-13",
+        "to": "2026-11-13",
+        "coverage": {
+          "state": "complete",
+          "known_model_calls": "0",
+          "unknown_model_calls": "0",
+          "measured_file_operations": "0",
+          "unmeasured_file_operations": "0",
+          "last_received_at": null,
+          "data_through": null,
+          "warning_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "catalog response",
+    "schema": "catalogResponse",
+    "value": {
+      "data": {
+        "employees": [],
+        "departments": [],
+        "app_versions": [],
+        "sources": [],
+        "languages": []
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "listEmployee response",
+    "schema": "listEmployeeResponse",
+    "value": {
+      "data": {
+        "items": [],
+        "next_cursor": null,
+        "total": "0"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "createEmployee request",
+    "schema": "EmployeeInput",
+    "value": {
+      "name": "示例值",
+      "employee_no": null,
+      "department_id": null
+    }
+  },
+  {
+    "name": "createEmployee response",
+    "schema": "createEmployeeResponse",
+    "value": {
+      "data": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "name": "示例值",
+        "employee_no": null,
+        "department_id": null,
+        "status": "active",
+        "installation_count": 0,
+        "revision": 0
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "updateEmployee request",
+    "schema": "EmployeeUpdate",
+    "value": {
+      "name": "示例值",
+      "employee_no": null,
+      "department_id": null,
+      "effective_from": "2026-11-13",
+      "expected_revision": 0
+    }
+  },
+  {
+    "name": "updateEmployee response",
+    "schema": "updateEmployeeResponse",
+    "value": {
+      "data": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "name": "示例值",
+        "employee_no": null,
+        "department_id": null,
+        "status": "active",
+        "installation_count": 0,
+        "revision": 0
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "archiveEmployee request",
+    "schema": "RevisionInput",
+    "value": {
+      "expected_revision": 0,
+      "reason": "示例值"
+    }
+  },
+  {
+    "name": "archiveEmployee response",
+    "schema": "archiveEmployeeResponse",
+    "value": {
+      "data": {
+        "ok": false
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "listDepartment response",
+    "schema": "listDepartmentResponse",
+    "value": {
+      "data": {
+        "items": [],
+        "next_cursor": null,
+        "total": "0"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "createDepartment request",
+    "schema": "DepartmentInput",
+    "value": {
+      "name": "示例值"
+    }
+  },
+  {
+    "name": "createDepartment response",
+    "schema": "createDepartmentResponse",
+    "value": {
+      "data": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "name": "示例值",
+        "status": "active",
+        "revision": 0
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "updateDepartment request",
+    "schema": "DepartmentUpdate",
+    "value": {
+      "name": "示例值",
+      "expected_revision": 0
+    }
+  },
+  {
+    "name": "updateDepartment response",
+    "schema": "updateDepartmentResponse",
+    "value": {
+      "data": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "name": "示例值",
+        "status": "active",
+        "revision": 0
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "archiveDepartment request",
+    "schema": "RevisionInput",
+    "value": {
+      "expected_revision": 0,
+      "reason": "示例值"
+    }
+  },
+  {
+    "name": "archiveDepartment response",
+    "schema": "archiveDepartmentResponse",
+    "value": {
+      "data": {
+        "ok": false
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "listAdminUser response",
+    "schema": "listAdminUserResponse",
+    "value": {
+      "data": {
+        "items": [],
+        "next_cursor": null,
+        "total": "0"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "createAdminUser request",
+    "schema": "AdminCreate",
+    "value": {
+      "username": "示例值",
+      "display_name": "示例值",
+      "role": "admin",
+      "temporary_password": "示例值示例值示例值示例值"
+    }
+  },
+  {
+    "name": "createAdminUser response",
+    "schema": "createAdminUserResponse",
+    "value": {
+      "data": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "username": "示例值",
+        "display_name": "示例值",
+        "role": "admin",
+        "status": "active",
+        "revision": 0,
+        "must_change_password": false
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "updateAdminUser request",
+    "schema": "AdminUpdate",
+    "value": {
+      "display_name": "示例值",
+      "role": "admin",
+      "status": "active",
+      "expected_revision": 0
+    }
+  },
+  {
+    "name": "updateAdminUser response",
+    "schema": "updateAdminUserResponse",
+    "value": {
+      "data": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "username": "示例值",
+        "display_name": "示例值",
+        "role": "admin",
+        "status": "active",
+        "revision": 0,
+        "must_change_password": false
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "archiveAdminUser request",
+    "schema": "RevisionInput",
+    "value": {
+      "expected_revision": 0,
+      "reason": "示例值"
+    }
+  },
+  {
+    "name": "archiveAdminUser response",
+    "schema": "archiveAdminUserResponse",
+    "value": {
+      "data": {
+        "ok": false
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "revokeSessions request",
+    "schema": "RevisionInput",
+    "value": {
+      "expected_revision": 0,
+      "reason": "示例值"
+    }
+  },
+  {
+    "name": "revokeSessions response",
+    "schema": "revokeSessionsResponse",
+    "value": {
+      "data": {
+        "ok": false
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "listInstallations response",
+    "schema": "listInstallationsResponse",
+    "value": {
+      "data": {
+        "items": [],
+        "next_cursor": null,
+        "total": "0"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "getInstallation response",
+    "schema": "getInstallationResponse",
+    "value": {
+      "data": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "windows_username": "示例值",
+        "device_label": "示例值",
+        "employee_id": null,
+        "app_version": "示例值",
+        "status": "active",
+        "last_received_at": null,
+        "last_event_at": null,
+        "reported_queue_events": "0",
+        "coverage": {
+          "state": "complete",
+          "known_model_calls": "0",
+          "unknown_model_calls": "0",
+          "measured_file_operations": "0",
+          "unmeasured_file_operations": "0",
+          "last_received_at": null,
+          "data_through": null,
+          "warning_codes": []
+        },
+        "revision": 0
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "listBindings response",
+    "schema": "listBindingsResponse",
+    "value": {
+      "data": {
+        "items": [],
+        "next_cursor": null,
+        "total": "0"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "createBinding request",
+    "schema": "BindingInput",
+    "value": {
+      "employee_id": "10000000-0000-4000-8000-000000000001",
+      "valid_from": "2026-11-13",
+      "valid_to": null,
+      "reason": "示例值",
+      "expected_revision": 0
+    }
+  },
+  {
+    "name": "createBinding response",
+    "schema": "createBindingResponse",
+    "value": {
+      "data": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000001",
+        "employee_id": "10000000-0000-4000-8000-000000000001",
+        "valid_from": "2026-11-13",
+        "valid_to": null,
+        "reason": "示例值",
+        "revision": 0
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "correctBinding request",
+    "schema": "BindingInput",
+    "value": {
+      "employee_id": "10000000-0000-4000-8000-000000000001",
+      "valid_from": "2026-11-13",
+      "valid_to": null,
+      "reason": "示例值",
+      "expected_revision": 0
+    }
+  },
+  {
+    "name": "correctBinding response",
+    "schema": "correctBindingResponse",
+    "value": {
+      "data": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000001",
+        "employee_id": "10000000-0000-4000-8000-000000000001",
+        "valid_from": "2026-11-13",
+        "valid_to": null,
+        "reason": "示例值",
+        "revision": 0
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "revokeInstallation request",
+    "schema": "RevisionInput",
+    "value": {
+      "expected_revision": 0,
+      "reason": "示例值"
+    }
+  },
+  {
+    "name": "revokeInstallation response",
+    "schema": "revokeInstallationResponse",
+    "value": {
+      "data": {
+        "ok": false
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "listEnrollment response",
+    "schema": "listEnrollmentResponse",
+    "value": {
+      "data": {
+        "items": [],
+        "next_cursor": null,
+        "total": "0"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "createEnrollment request",
+    "schema": "EnrollmentInput",
+    "value": {
+      "label": "示例值",
+      "expires_at": "2026-11-13T02:00:00.000Z",
+      "max_registrations": 1
+    }
+  },
+  {
+    "name": "createEnrollment response",
+    "schema": "createEnrollmentResponse",
+    "value": {
+      "data": {
+        "key": {
+          "id": "10000000-0000-4000-8000-000000000001",
+          "label": "示例值",
+          "expires_at": "2026-11-13T02:00:00.000Z",
+          "max_registrations": 1,
+          "used_registrations": 0,
+          "revoked_at": null,
+          "revision": 0
+        },
+        "secret": "示例值"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "revokeEnrollment request",
+    "schema": "RevisionInput",
+    "value": {
+      "expected_revision": 0,
+      "reason": "示例值"
+    }
+  },
+  {
+    "name": "revokeEnrollment response",
+    "schema": "revokeEnrollmentResponse",
+    "value": {
+      "data": {
+        "ok": false
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "getSync response",
+    "schema": "getSyncResponse",
+    "value": {
+      "data": {
+        "version": 0,
+        "enabled": false,
+        "interval_min_seconds": 1500,
+        "interval_max_seconds": 2100,
+        "initial_delay_min_seconds": 60,
+        "initial_delay_max_seconds": 300,
+        "reconnect_min_seconds": 120,
+        "reconnect_max_seconds": 600,
+        "max_batch_events": 500,
+        "max_batch_bytes": 262144,
+        "queue_max_days": 30,
+        "queue_max_bytes": 268435456
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "updateSync request",
+    "schema": "PolicyUpdate",
+    "value": {
+      "policy": {
+        "version": 0,
+        "enabled": false,
+        "interval_min_seconds": 1500,
+        "interval_max_seconds": 2100,
+        "initial_delay_min_seconds": 60,
+        "initial_delay_max_seconds": 300,
+        "reconnect_min_seconds": 120,
+        "reconnect_max_seconds": 600,
+        "max_batch_events": 500,
+        "max_batch_bytes": 262144,
+        "queue_max_days": 30,
+        "queue_max_bytes": 268435456
+      },
+      "expected_revision": 0,
+      "reason": "示例值"
+    }
+  },
+  {
+    "name": "updateSync response",
+    "schema": "updateSyncResponse",
+    "value": {
+      "data": {
+        "version": 0,
+        "enabled": false,
+        "interval_min_seconds": 1500,
+        "interval_max_seconds": 2100,
+        "initial_delay_min_seconds": 60,
+        "initial_delay_max_seconds": 300,
+        "reconnect_min_seconds": 120,
+        "reconnect_max_seconds": 600,
+        "max_batch_events": 500,
+        "max_batch_bytes": 262144,
+        "queue_max_days": 30,
+        "queue_max_bytes": 268435456
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "getRetention response",
+    "schema": "getRetentionResponse",
+    "value": {
+      "data": {
+        "raw_days": 90,
+        "daily_months": 24,
+        "audit_days": 365,
+        "revision": 0
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "updateRetention request",
+    "schema": "RetentionUpdate",
+    "value": {
+      "policy": {
+        "raw_days": 90,
+        "daily_months": 24,
+        "audit_days": 365,
+        "revision": 0
+      },
+      "expected_revision": 0,
+      "reason": "示例值"
+    }
+  },
+  {
+    "name": "updateRetention response",
+    "schema": "updateRetentionResponse",
+    "value": {
+      "data": {
+        "raw_days": 90,
+        "daily_months": 24,
+        "audit_days": 365,
+        "revision": 0
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "listAudit response",
+    "schema": "listAuditResponse",
+    "value": {
+      "data": {
+        "items": [],
+        "next_cursor": null,
+        "total": "0"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "createExport request",
+    "schema": "ExportInput",
+    "value": {
+      "kind": "employee_daily",
+      "from": "2026-11-13",
+      "to": "2026-11-13",
+      "employee_ids": [],
+      "department_ids": [],
+      "app_versions": []
+    }
+  },
+  {
+    "name": "createExport response",
+    "schema": "createExportResponse",
+    "value": {
+      "data": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "status": "queued",
+        "created_at": "2026-11-13T02:00:00.000Z",
+        "row_count": null,
+        "expires_at": "2026-11-13T02:00:00.000Z",
+        "download_path": null,
+        "error_code": null
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "getExport response",
+    "schema": "getExportResponse",
+    "value": {
+      "data": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "status": "queued",
+        "created_at": "2026-11-13T02:00:00.000Z",
+        "row_count": null,
+        "expires_at": "2026-11-13T02:00:00.000Z",
+        "download_path": null,
+        "error_code": null
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "liveness response",
+    "schema": "livenessResponse",
+    "value": {
+      "data": {
+        "status": "ok"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "readiness response",
+    "schema": "readinessResponse",
+    "value": {
+      "data": {
+        "status": "ok"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "desktop.started",
+    "schema": "DesktopStartedEvent",
+    "value": {
+      "event_id": "10000000-0000-4000-8000-000000000001",
+      "event_seq": "0",
+      "source_key": "示例值",
+      "event_type": "desktop.started",
+      "occurred_at": "2026-11-13T02:00:00.000Z",
+      "app_launch_id": "10000000-0000-4000-8000-000000000001",
+      "app_version": "示例值",
+      "payload": {
+        "reason": "manual"
+      }
+    }
+  },
+  {
+    "name": "desktop.opened",
+    "schema": "DesktopOpenedEvent",
+    "value": {
+      "event_id": "10000000-0000-4000-8000-000000000001",
+      "event_seq": "0",
+      "source_key": "示例值",
+      "event_type": "desktop.opened",
+      "occurred_at": "2026-11-13T02:00:00.000Z",
+      "app_launch_id": "10000000-0000-4000-8000-000000000001",
+      "app_version": "示例值",
+      "payload": {
+        "activation_id": "10000000-0000-4000-8000-000000000001",
+        "reason": "manual_launch"
+      }
+    }
+  },
+  {
+    "name": "desktop.activity",
+    "schema": "DesktopActivityEvent",
+    "value": {
+      "event_id": "10000000-0000-4000-8000-000000000001",
+      "event_seq": "0",
+      "source_key": "示例值",
+      "event_type": "desktop.activity",
+      "occurred_at": "2026-11-13T02:00:00.000Z",
+      "app_launch_id": "10000000-0000-4000-8000-000000000001",
+      "app_version": "示例值",
+      "payload": {
+        "start_at": "2026-11-13T02:00:00.000Z",
+        "end_at": "2026-11-13T02:00:00.000Z",
+        "runtime_ms": "0",
+        "active_ranges": [],
+        "sample_interval_ms": 5000,
+        "time_quality": "synchronized"
+      }
+    }
+  },
+  {
+    "name": "query.submitted",
+    "schema": "QuerySubmittedEvent",
+    "value": {
+      "event_id": "10000000-0000-4000-8000-000000000001",
+      "event_seq": "0",
+      "source_key": "示例值",
+      "event_type": "query.submitted",
+      "occurred_at": "2026-11-13T02:00:00.000Z",
+      "app_launch_id": "10000000-0000-4000-8000-000000000001",
+      "app_version": "示例值",
+      "payload": {
+        "query_id": "10000000-0000-4000-8000-000000000001",
+        "command_id": "示例值",
+        "source": "chat",
+        "trigger": "human",
+        "accepted_at": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "query.updated",
+    "schema": "QueryUpdatedEvent",
+    "value": {
+      "event_id": "10000000-0000-4000-8000-000000000001",
+      "event_seq": "0",
+      "source_key": "示例值",
+      "event_type": "query.updated",
+      "occurred_at": "2026-11-13T02:00:00.000Z",
+      "app_launch_id": "10000000-0000-4000-8000-000000000001",
+      "app_version": "示例值",
+      "payload": {
+        "query_id": "10000000-0000-4000-8000-000000000001",
+        "revision": 0,
+        "status": "queued",
+        "run_id": null
+      }
+    }
+  },
+  {
+    "name": "run.started",
+    "schema": "RunStartedEvent",
+    "value": {
+      "event_id": "10000000-0000-4000-8000-000000000001",
+      "event_seq": "0",
+      "source_key": "示例值",
+      "event_type": "run.started",
+      "occurred_at": "2026-11-13T02:00:00.000Z",
+      "app_launch_id": "10000000-0000-4000-8000-000000000001",
+      "app_version": "示例值",
+      "payload": {
+        "run_id": "10000000-0000-4000-8000-000000000001",
+        "query_id": null,
+        "parent_run_id": null,
+        "source": "chat",
+        "started_at": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "run.finished",
+    "schema": "RunFinishedEvent",
+    "value": {
+      "event_id": "10000000-0000-4000-8000-000000000001",
+      "event_seq": "0",
+      "source_key": "示例值",
+      "event_type": "run.finished",
+      "occurred_at": "2026-11-13T02:00:00.000Z",
+      "app_launch_id": "10000000-0000-4000-8000-000000000001",
+      "app_version": "示例值",
+      "payload": {
+        "run_id": "10000000-0000-4000-8000-000000000001",
+        "outcome": "completed",
+        "duration_ms": null,
+        "waiting_ms": null,
+        "finished_at": null
+      }
+    }
+  },
+  {
+    "name": "model.started",
+    "schema": "ModelStartedEvent",
+    "value": {
+      "event_id": "10000000-0000-4000-8000-000000000001",
+      "event_seq": "0",
+      "source_key": "示例值",
+      "event_type": "model.started",
+      "occurred_at": "2026-11-13T02:00:00.000Z",
+      "app_launch_id": "10000000-0000-4000-8000-000000000001",
+      "app_version": "示例值",
+      "payload": {
+        "call_id": "10000000-0000-4000-8000-000000000001",
+        "query_id": null,
+        "run_id": null,
+        "provider": "示例值",
+        "model": "示例值",
+        "source": "chat",
+        "started_at": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "model.finished",
+    "schema": "ModelFinishedEvent",
+    "value": {
+      "event_id": "10000000-0000-4000-8000-000000000001",
+      "event_seq": "0",
+      "source_key": "示例值",
+      "event_type": "model.finished",
+      "occurred_at": "2026-11-13T02:00:00.000Z",
+      "app_launch_id": "10000000-0000-4000-8000-000000000001",
+      "app_version": "示例值",
+      "payload": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "query_id": null,
+        "run_id": null,
+        "provider": "示例值",
+        "model": "示例值",
+        "source": "chat",
+        "status": "completed",
+        "started_at": "2026-11-13T02:00:00.000Z",
+        "finished_at": null,
+        "duration_ms": null,
+        "usage_status": "reported",
+        "input_tokens": null,
+        "output_tokens": null,
+        "cache_read_tokens": null,
+        "cache_write_tokens": null,
+        "total_tokens": null
+      }
+    }
+  },
+  {
+    "name": "file.changed",
+    "schema": "FileChangedEvent",
+    "value": {
+      "event_id": "10000000-0000-4000-8000-000000000001",
+      "event_seq": "0",
+      "source_key": "示例值",
+      "event_type": "file.changed",
+      "occurred_at": "2026-11-13T02:00:00.000Z",
+      "app_launch_id": "10000000-0000-4000-8000-000000000001",
+      "app_version": "示例值",
+      "payload": {
+        "operation_id": "10000000-0000-4000-8000-000000000001",
+        "run_id": null,
+        "query_id": null,
+        "tool_call_id": "示例值",
+        "file_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "language": "示例值",
+        "file_category": "code",
+        "kind": "created",
+        "added_lines": null,
+        "deleted_lines": null,
+        "measurement_status": "measured"
+      }
+    }
+  },
+  {
+    "name": "client.health",
+    "schema": "ClientHealthEvent",
+    "value": {
+      "event_id": "10000000-0000-4000-8000-000000000001",
+      "event_seq": "0",
+      "source_key": "示例值",
+      "event_type": "client.health",
+      "occurred_at": "2026-11-13T02:00:00.000Z",
+      "app_launch_id": "10000000-0000-4000-8000-000000000001",
+      "app_version": "示例值",
+      "payload": {
+        "queue_events": "0",
+        "queue_bytes": "0",
+        "dropped_events": "0",
+        "quarantined_events": "0",
+        "clock_offset_ms": -86400000,
+        "clock_sync_at": null,
+        "codes": []
+      }
+    }
+  }
+]

@@ -1,0 +1,14 @@
+# Replace analytics.example.com with the organization's real hostname.
+analytics.example.com {
+    encode zstd gzip
+    request_body {
+        max_size 256KB
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "no-referrer"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'"
+    }
+    reverse_proxy 127.0.0.1:4319
+}

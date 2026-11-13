@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "operations": 51,
+  "schemas": 139,
+  "event_types": [
+    "desktop.started",
+    "desktop.opened",
+    "desktop.activity",
+    "query.submitted",
+    "query.updated",
+    "run.started",
+    "run.finished",
+    "model.started",
+    "model.finished",
+    "file.changed",
+    "client.health"
+  ]
+}

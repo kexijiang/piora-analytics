@@ -1,0 +1,54 @@
+{
+  "name": "piora-analytics",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Piora Windows 团队使用统计后端与管理看板",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "workspaces": [
+    "apps/dashboard",
+    "apps/api",
+    "apps/worker",
+    "packages/contracts"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @piora-analytics/dashboard",
+    "build": "npm run build --workspace @piora-analytics/dashboard",
+    "design:generate": "node scripts/generate-contract.mjs && node scripts/generate-db.mjs && node scripts/generate-demo.mjs",
+    "types:generate": "openapi-typescript contracts/openapi.yaml -o packages/contracts/src/api.generated.ts",
+    "typecheck": "tsc --noEmit -p apps/dashboard/tsconfig.json",
+    "check": "node scripts/check-contract.mjs && node scripts/check-docs.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:ui": "playwright test",
+    "screenshots": "playwright test --project=chromium",
+    "test:database": "node scripts/check-database.mjs",
+    "setup": "node --env-file-if-exists=.env scripts/setup.mjs",
+    "dev:api": "node --env-file-if-exists=.env apps/api/src/main.mjs",
+    "dev:worker": "node --env-file-if-exists=.env apps/worker/src/main.mjs",
+    "test:api": "node tests/api.integration.mjs"
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-parser": "13.1.0",
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "embedded-postgres": "^18.6.0-beta.19",
+    "openapi-typescript": "7.13.0",
+    "prettier": "3.10.1",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.5",
+    "@fastify/static": "^10.1.11",
+    "@node-rs/argon2": "^2.2.2",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "fastify": "^5.12.8",
+    "json-canonicalize": "^3.0.1",
+    "pg": "^8.16.3",
+    "yaml": "^2.8.1"
+  }
+}

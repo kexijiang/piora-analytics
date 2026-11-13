@@ -1,0 +1,9 @@
+node_modules
+.git
+.local
+.verification
+test-results
+playwright-report
+apps/dashboard/dist
+.env*
+docs/ui/screenshots
