@@ -412,7 +412,7 @@ export async function adminOperation(c, id, b, q, p, ctx) {
     const rows = clean(
       (
         await c.query(
-          "SELECT id,actor_id,action,target_type,target_id,occurred_at,summary FROM audit_logs WHERE org_id=$1 AND occurred_at>=$2::date AT TIME ZONE 'Asia/Shanghai' AND occurred_at<$3::date AT TIME ZONE 'Asia/Shanghai' ORDER BY occurred_at DESC,id",
+          "SELECT id,actor_id,action,target_type,target_id,occurred_at,summary FROM audit_logs WHERE org_id=$1 AND occurred_at>=($2::date::timestamp AT TIME ZONE 'Asia/Shanghai') AND occurred_at<($3::date::timestamp AT TIME ZONE 'Asia/Shanghai') ORDER BY occurred_at DESC,id",
           [ctx.org, q.from, q.to],
         )
       ).rows,

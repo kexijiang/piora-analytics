@@ -583,7 +583,7 @@ async function queryReport(c, id, q, params, ctx) {
   const rows = clean(
     (
       await c.query(
-        "SELECT q.*,b.employee_id,ep.department_id FROM queries q LEFT JOIN installation_bindings b ON b.org_id=q.org_id AND b.installation_id=q.installation_id AND b.valid_days @> (q.accepted_at AT TIME ZONE 'Asia/Shanghai')::date LEFT JOIN employee_department_periods ep ON ep.org_id=b.org_id AND ep.employee_id=b.employee_id AND ep.valid_days @> (q.accepted_at AT TIME ZONE 'Asia/Shanghai')::date WHERE q.org_id=$1 AND q.accepted_at>=$2::date AT TIME ZONE 'Asia/Shanghai' AND q.accepted_at<$3::date AT TIME ZONE 'Asia/Shanghai' ORDER BY q.accepted_at DESC,q.id",
+        "SELECT q.*,b.employee_id,ep.department_id FROM queries q LEFT JOIN installation_bindings b ON b.org_id=q.org_id AND b.installation_id=q.installation_id AND b.valid_days @> (q.accepted_at AT TIME ZONE 'Asia/Shanghai')::date LEFT JOIN employee_department_periods ep ON ep.org_id=b.org_id AND ep.employee_id=b.employee_id AND ep.valid_days @> (q.accepted_at AT TIME ZONE 'Asia/Shanghai')::date WHERE q.org_id=$1 AND q.accepted_at>=($2::date::timestamp AT TIME ZONE 'Asia/Shanghai') AND q.accepted_at<($3::date::timestamp AT TIME ZONE 'Asia/Shanghai') ORDER BY q.accepted_at DESC,q.id",
         [ctx.org, q.from, q.to],
       )
     ).rows,

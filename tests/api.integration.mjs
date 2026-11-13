@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { testDatabase } from "./support/postgres.mjs";
-import { uuid, root } from "../apps/api/src/core.mjs";
+import { uuid, root, createPool } from "../apps/api/src/core.mjs";
 import { passwordHash } from "../apps/api/src/auth.mjs";
 import { createServer } from "../apps/api/src/server.mjs";
 import { runAggregation } from "../apps/worker/src/aggregate.mjs";
@@ -149,7 +149,12 @@ try {
     run = uuid(),
     model = uuid(),
     launch = uuid(),
-    at = new Date(now - 120000).toISOString();
+    // Keep the ordinary daily fixture on one Shanghai day even at midnight.
+    atMs = Math.max(
+      now - 120000,
+      Date.parse(today + "T00:00:00+08:00") + 60000,
+    ),
+    at = new Date(atMs).toISOString();
   const event = (event_type, payload, time = at) => ({
     event_id: uuid(),
     event_seq: String(++seq),
@@ -164,11 +169,11 @@ try {
     event("desktop.started", { reason: "manual" }),
     event("desktop.opened", { activation_id: uuid(), reason: "manual_launch" }),
     event("desktop.activity", {
-      start_at: new Date(now - 180000).toISOString(),
+      start_at: new Date(atMs - 60000).toISOString(),
       end_at: at,
       runtime_ms: "60000",
       active_ranges: [
-        { start_at: new Date(now - 180000).toISOString(), end_at: at },
+        { start_at: new Date(atMs - 60000).toISOString(), end_at: at },
       ],
       sample_interval_ms: 5000,
       time_quality: "synchronized",
@@ -202,7 +207,7 @@ try {
       source: "chat",
       status: "completed",
       started_at: at,
-      finished_at: new Date(now - 60000).toISOString(),
+      finished_at: new Date(atMs + 60000).toISOString(),
       duration_ms: "60000",
       usage_status: "reported",
       input_tokens: "1000",
@@ -229,7 +234,7 @@ try {
       outcome: "completed",
       duration_ms: "60000",
       waiting_ms: "0",
-      finished_at: new Date(now - 60000).toISOString(),
+      finished_at: new Date(atMs + 60000).toISOString(),
     }),
     event("query.updated", {
       query_id: qid,
@@ -533,6 +538,81 @@ try {
     "/v1/admin/exports/" + exp.id + "/download",
   );
   assert.match(download.body, /合成人员甲/);
+  // Exercise both sides of a completed Shanghai day in actual HTTP handlers.
+  // PostgreSQL must not interpret a bare DATE through its session timezone.
+  const boundaryDay = dayOf(now - 3 * 86400000);
+  const dayStart = Date.parse(boundaryDay + "T00:00:00+08:00");
+  const dayEnd = dayStart + 86400000;
+  const boundaryIds = [uuid(), uuid(), uuid(), uuid()];
+  const boundaryEvents = [dayStart - 1, dayStart, dayEnd - 1, dayEnd].map(
+    (time, index) => {
+      const accepted = new Date(time).toISOString();
+      return event(
+        "query.submitted",
+        {
+          query_id: boundaryIds[index],
+          command_id: "timezone-boundary-" + index,
+          source: "chat",
+          trigger: "human",
+          accepted_at: accepted,
+        },
+        accepted,
+      );
+    },
+  );
+  assert.equal(
+    (await send(boundaryEvents)).json().data.accepted_event_ids.length,
+    4,
+  );
+  const boundaryQuery = "?from=" + boundaryDay + "&to=" + dayOf(dayEnd);
+  for (const [index, boundary] of boundaryEvents.entries())
+    await db.pool.query(
+      "INSERT INTO audit_logs(id,org_id,actor_id,action,target_type,target_id,summary,request_id,occurred_at) VALUES($1,$2,$3,'timezone-fixture','organization',$2,'synthetic boundary',$4,$5)",
+      [boundaryIds[index], org, admin, uuid(), boundary.occurred_at],
+    );
+  for (const timezone of ["UTC", "Asia/Shanghai", "America/New_York"]) {
+    const url = new URL(db.url);
+    url.searchParams.set("options", "-c timezone=" + timezone);
+    const timezonePool = createPool(url.toString());
+    const originalApp = app;
+    try {
+      app = await createServer(timezonePool, config);
+      const result = (
+        await call("GET", "/v1/admin/analytics/queries" + boundaryQuery)
+      ).json().data;
+      assert.deepEqual(
+        result.items.map((row) => row.id),
+        [boundaryIds[2], boundaryIds[1]],
+        timezone + ": Shanghai [from,to) boundaries",
+      );
+      const audit = (
+        await call("GET", "/v1/admin/audit-logs" + boundaryQuery)
+      ).json().data;
+      assert.deepEqual(
+        audit.items.map((row) => row.id),
+        [boundaryIds[2], boundaryIds[1]],
+        timezone + ": audit uses the same day boundaries",
+      );
+      for (const suffix of ["", "/calls", "/file-changes"])
+        await call(
+          "GET",
+          "/v1/admin/analytics/queries/" +
+            boundaryIds[1] +
+            suffix +
+            boundaryQuery,
+        );
+      await call(
+        "GET",
+        "/v1/admin/analytics/queries/" + boundaryIds[3] + boundaryQuery,
+        undefined,
+        404,
+      );
+    } finally {
+      if (app !== originalApp) await app.close();
+      app = originalApp;
+      await timezonePool.end();
+    }
+  }
   const midnight = Date.parse(dayOf(now - 86400000) + "T00:00:00+08:00");
   const crossing = event(
     "desktop.activity",
