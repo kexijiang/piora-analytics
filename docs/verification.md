@@ -1,6 +1,6 @@
 # 本地验证记录
 
-日期：2026-11-13；Windows 开发机，Node.js 24.5.0。测试数据全部合成，没有读取或上传真实员工会话。
+日期：2026-11-13 至 2026-11-14；Windows 开发机，Node.js 24.5.0。测试数据全部合成，没有读取或上传真实员工会话。
 
 | 检查 | 实际结果 / 范围 |
 |---|---|
@@ -11,8 +11,9 @@
 | React 类型与 Vite 构建 | TypeScript 无错误；Vite 静态产物构建成功 |
 | 演示 UI | Chromium/Edge 中操作全部六页、筛选、侧栏、Query 详情、下载、只读、深色、窄屏、错误与空状态；输出 10 张 UI 图 |
 | 真实浏览器/真实 API | 独立 PG + Fastify + Vite；真实登录 Cookie/CSRF、创建部门、刷新后持久存在；无 pageerror |
-| Piora 新增采集测试 | 13 项：SQLite/序号、ACK、白名单、队列、暂停、抖动、补传、DPAPI 不可用、usage、群聊、provider、文件、恢复 |
-| Piora 既有相关回归 | prompt-run-registry、session-control-store、model-stall-guard、task-timing、session-message-router、room-chat-dispatch；50 项既有相关测试，加新增 13 项共 63 项通过，不代替全套 CI |
+| Piora 新增采集测试 | 14 项：Windows 自启识别、SQLite/序号、ACK、白名单、队列、暂停、抖动、补传、DPAPI 不可用、usage、群聊、provider、文件、恢复 |
+| Piora 既有相关回归 | prompt-run-registry、session-control-store、model-stall-guard、task-timing、session-message-router、room-chat-dispatch；50 项既有相关测试通过，不代替全套 CI |
+| Piora CI 修复复测 | 首轮 CI 发现共享 .mts 生产编译和旧 VM 夹具缺依赖；修复后 55 项定向测试通过，包含上述 14 项采集测试及自启/启动/托盘/模型采样/会话创建/真实 Webpack 单模块编译与 SQLite 重开 |
 | Piora 类型检查 | 根与 desktop TypeScript 无错误；没有运行 next build 或构建本地安装包 |
 | Windows 原生夹具 | 真实 Electron 45、SQLite WAL、异步 DPAPI 加解密、powerMonitor；锁屏/休眠事件为注入，不是实际 OS 操作 |
 | Piora 开发桌面 UI | 实际设置导航、未配置状态、刷新/重载；API 200、无 renderer error。两次启动被 worktree 共享依赖路径阻断，按本地 Next.js 文档临时配置 additional root 后复测通过，配置已恢复 |

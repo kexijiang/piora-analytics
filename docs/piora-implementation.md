@@ -41,6 +41,8 @@ API/Worker 与客户端事件契约在后端仓库维护。客户端只上传统
 
 人工聊天提交按持久 commandId 幂等；同一文本再次提交新 ID 算新 Query，模型重试不增加人工 Query。群聊根消息与子命令分开，多个模型/Agent 扇出仍只增加一个人工 Query。Steer 的实际消耗无法确认时 query_id 为空并报告质量码；群聊根消息暂不推断所有分支的统一终态。
 
+Windows 新设置的开机自启携带 --piora-autostart，自动启动不增加手动打开次数。已有无参数自启项继续显示启用；未带来源参数且旧自启项存在、或系统配置读取失败时，仅计冷启动并标 STARTUP_ORIGIN_UNKNOWN，不猜测成手动打开。重新启用自启后使用新标记；不依赖 macOS 专属的 wasOpenedAtLogin。
+
 模型在实际 provider stream 边界计数；普通输入、输出、缓存读取、缓存写入按 SDK 非重叠桶累计。全零默认值不能确认是供应商真实报告时标 unknown。辅助模型入口已接入；压缩/自动任务等没有专属上下文的调用归为 system，真实供应商覆盖仍需试点核对。
 
 代码只计内置 write/edit 实际 execute 前后读取的文件；配置、文档单列。>2 MiB、二进制、读失败、并发漂移和工具失败标不可计量。shell/MCP/外部编辑器不保证覆盖；文件数/行数不是最终 Git 接受量。活跃时间为 5 秒采样估计，后台任务、锁屏和休眠不算前台活跃；服务端对同员工多设备活跃区间取并集。
@@ -57,6 +59,8 @@ node_modules/.bin/tsc --noEmit -p desktop/tsconfig.json
 
 新测试覆盖持久/幂等/ACK、队列限制、抖动、失败补传、暂停、未知 Token、群聊去重、provider 观察器、真实文件前后 diff、重启未知终态；原生测试运行真实 Electron、SQLite 和 Windows DPAPI，电源事件是注入夹具。没有把它描述为真实睡眠/锁屏操作或安装包验收。
 
-另已在真实开发 Electron 中通过设置导航、未配置状态、刷新和重载检查，未发生 renderer error。报告：.verification/desktop-e2e-mCYUsq/report.md。前两次启动因 worktree 共享依赖超出 Turbopack root 而中断；成功复测临时按当前 Next.js 文档配置 additional root 指向共享依赖，结束后已恢复 next.config.ts。没有修改主工作目录或在其中运行开发服务。
+14 项采集测试、50 项会话/任务相关回归及包含采集测试的 55 项 CI 修复定向复测通过；补充覆盖 Windows 自启来源、统计导入/初始化失败不中断启动、共享 .mts 的 Webpack 编译和 SQLite 重开。实际开发代码及后续 CI 见 [Piora PR #425](https://github.com/kexijiang/pi-desktop/pull/425)。
+
+另已在真实开发 Electron 中通过设置导航、未配置状态、刷新和重载检查，未发生 renderer error。报告：.verification/desktop-e2e-czepTB/report.md（完整状态卡截图复测）；首次成功记录为 desktop-e2e-mCYUsq。前两次启动因 worktree 共享依赖超出 Turbopack root 而中断；成功复测临时按当前 Next.js 文档配置 additional root 指向共享依赖，结束后已移除该临时配置。没有修改主工作目录或在其中运行开发服务。客户端截图在 Piora 仓库 docs/images/organization-analytics-settings.png。
 
 本次不在主开发目录运行 next build、不构建发布包、不启用现有用户统计。上线仍需部署后端、企业安全配置、5 台试点及 GitHub Actions Windows 发布。

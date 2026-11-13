@@ -4,6 +4,8 @@
 
 **已实现 API、Worker、PostgreSQL 数据库、真实管理 UI 和配套 Piora 采集代码。已做本地数据库/API/浏览器/Windows 原生验证；尚未部署生产环境，也未给现有员工启用统计。** 演示数据仅在显式 demo 模式启用，截图使用虚构数据。详细实现范围见 [交付状态](docs/implementation-status.md)。
 
+Piora 客户端实现与审阅入口：[PR #425](https://github.com/kexijiang/pi-desktop/pull/425)；实际接入和验证说明见 [客户端实现](docs/piora-implementation.md)。
+
 ![看板总览](docs/ui/screenshots/01-overview-light.png)
 
 ## 本地查看
