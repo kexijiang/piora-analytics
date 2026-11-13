@@ -45,3 +45,5 @@ npm run test:ui
 GitHub CI 状态以相应提交的 Actions 为准，本文件不预报未来结果。没有做 500 台容量压测、生产数据库备份恢复、Linux 容器/TLS 部署、真实付费模型逐供应商对账、Windows 安装包升级或员工实机多日试点。不要把本地夹具通过解释为生产部署完成。
 
 后端初始提交 8ad50fd 的 [GitHub Actions](https://github.com/kexijiang/piora-analytics/actions/runs/43455329174) 已通过 quality、test:database、test:api 三项任务，包括 Linux PostgreSQL 18 与 Chromium 浏览器复测。后续提交需查看其各自工作流结果。
+
+时区修复提交 7bdb7d8 的 [GitHub Actions](https://github.com/kexijiang/piora-analytics/actions/runs/43461319975) 三项任务全部通过。Piora 另补充独立包源码依赖与 Electron/ASAR 隔离加载测试，16 项打包相关回归通过；文件差异预算也覆盖 20,000 行重写，14 项采集测试和 2 项共享模块测试复测通过。Piora 最终完整 CI 以 [PR #425](https://github.com/kexijiang/pi-desktop/pull/425) 的当前提交状态为准。
