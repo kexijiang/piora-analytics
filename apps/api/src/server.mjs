@@ -264,7 +264,7 @@ export async function createServer(pool, config) {
                 reply.header("Retry-After", 60);
                 throw new ApiError(429, "RATE_LIMITED");
               }
-              body = await ingest(c, req.body, ctx);
+              body = await ingest(c, req.body, ctx, req);
             } else if (url.includes("/analytics/")) {
               const r = await report(c, id, req.query, req.params, ctx);
               body = r.data;

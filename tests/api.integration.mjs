@@ -641,6 +641,33 @@ try {
     crossingDays.map((r) => r.runtime_ms),
     ["1250", "1251"],
   );
+  const syncBefore = (await call("GET", "/v1/admin/settings/sync")).json().data;
+  const shortPolicy = {...syncBefore,version:syncBefore.version+1,interval_min_seconds:300,interval_max_seconds:900};
+  const updatePolicy = async policy => (await call("PATCH", "/v1/admin/settings/sync", {policy,expected_revision:policy.version-1,reason:"验证任意同步间隔"})).json().data;
+  assert.deepEqual(await updatePolicy(shortPolicy),shortPolicy);
+  assert.deepEqual((await call("GET","/v1/admin/settings/sync")).json().data,shortPolicy);
+  const featureHeader = {"x-piora-capabilities":"configurable-sync-interval"};
+  assert.equal((await call("POST","/v1/installations/register",registration,201,rh)).json().data.policy.interval_min_seconds,1500);
+  assert.deepEqual((await call("POST","/v1/installations/register",registration,201,{...rh,...featureHeader})).json().data.policy,shortPolicy);
+  const healthEvent = event("client.health", {queue_events:"0",queue_bytes:"0",dropped_events:"0",quarantined_events:"0",clock_offset_ms:0,clock_sync_at:at,codes:[]});
+  const policyBatch = () => ({batch_id:uuid(),protocol_version:"1.0",client_sent_at:new Date().toISOString(),policy_version:shortPolicy.version,events:[healthEvent]});
+  const legacyBatch = (await call("POST","/v1/telemetry/batches",policyBatch(),200,{authorization:device})).json().data;
+  assert.equal(legacyBatch.policy.interval_min_seconds,1500);
+  assert.equal(legacyBatch.policy.interval_max_seconds,2100);
+  const modernBatch = (await call("POST","/v1/telemetry/batches",policyBatch(),200,{authorization:device,...featureHeader})).json().data;
+  assert.deepEqual(modernBatch.policy,shortPolicy);
+  assert.deepEqual(modernBatch.duplicate_event_ids,[healthEvent.event_id]);
+  const longPolicy = {...shortPolicy,version:shortPolicy.version+1,interval_min_seconds:180*60,interval_max_seconds:1440*60};
+  assert.deepEqual(await updatePolicy(longPolicy),longPolicy);
+  const modernLong = (await call("POST","/v1/telemetry/batches",policyBatch(),200,{authorization:device,...featureHeader})).json().data;
+  assert.deepEqual(modernLong.policy,longPolicy);
+  const legacyLong = (await call("POST","/v1/telemetry/batches",policyBatch(),200,{authorization:device})).json().data;
+  assert.equal(legacyLong.policy.interval_min_seconds,7200);
+  assert.equal(legacyLong.policy.interval_max_seconds,7200);
+  await call("PATCH","/v1/admin/settings/sync",{policy:{...longPolicy,version:longPolicy.version+1,interval_min_seconds:900,interval_max_seconds:300},expected_revision:longPolicy.version,reason:"拒绝倒置范围"},422);
+  await call("PATCH","/v1/admin/settings/sync",{policy:{...longPolicy,version:longPolicy.version+1,interval_min_seconds:0},expected_revision:longPolicy.version,reason:"拒绝零间隔"},400);
+  await updatePolicy({...syncBefore,version:longPolicy.version+1});
+
   const rotation = {
     rotation_id: uuid(),
     next_credential: { credential_id: uuid(), secret: "B".repeat(43) },

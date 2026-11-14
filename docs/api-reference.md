@@ -142,6 +142,7 @@
 
 | 参数 | 位置 | 类型 | 必填 | 说明 |
 |---|---|---|---|---|
+| X-Piora-Capabilities | header | string | false | 新客户端发送 configurable-sync-interval，声明支持任意正间隔；未声明时下发旧版兼容范围 |
 | Idempotency-Key | header | string | true | 一次操作一个键；重试保持不变，24 小时内相同键不同内容为冲突 |
 
 请求体：RegisterInput
@@ -241,7 +242,7 @@
 
 | 参数 | 位置 | 类型 | 必填 | 说明 |
 |---|---|---|---|---|
-
+| X-Piora-Capabilities | header | string | false | 新客户端发送 configurable-sync-interval，声明支持任意正间隔；未声明时下发旧版兼容范围 |
 
 请求体：BatchInput
 
@@ -2084,8 +2085,8 @@
 |---|---|---|---|---|
 | version | integer | true | {"minimum":0,"maximum":1000000} | 策略版本 |
 | enabled | boolean | true | {} | 组织采集是否启用 |
-| interval_min_seconds | integer | true | {"minimum":1500,"maximum":7200,"default":1500} | 正常同步最小间隔 |
-| interval_max_seconds | integer | true | {"minimum":2100,"maximum":7200,"default":2100} | 正常同步最大间隔 |
+| interval_min_seconds | integer | true | {"minimum":1,"default":1500} | 正常同步最小间隔，正整数秒；后台可设置任意正整数分钟 |
+| interval_max_seconds | integer | true | {"minimum":1,"default":2100} | 正常同步最大间隔，不小于最小间隔；不设业务时间上限 |
 | initial_delay_min_seconds | integer | true | {"minimum":0,"maximum":600,"default":60} | 首次/逾期启动最小抖动 |
 | initial_delay_max_seconds | integer | true | {"minimum":0,"maximum":600,"default":300} | 首次/逾期启动最大抖动 |
 | reconnect_min_seconds | integer | true | {"minimum":0,"maximum":1800,"default":120} | 网络恢复最小抖动 |

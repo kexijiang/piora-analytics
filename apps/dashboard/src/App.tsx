@@ -233,6 +233,7 @@ export default function App() {
     [bind, setBind] = useState<S["Installation"] | null>(null),
     [bindEmployee, setBindEmployee] = useState(""),
     [policy, setPolicy] = useState<S["SyncPolicy"] | null>(null),
+    [appliedPolicy, setAppliedPolicy] = useState<S["SyncPolicy"] | null>(null),
     [accounts, setAccounts] = useState<S["AdminUser"][]>([]),
     [newForm, setNewForm] = useState(""),
     [newName, setNewName] = useState(""),
@@ -325,17 +326,38 @@ export default function App() {
     };
   }, [me, params, baseParams, cursor, refresh]);
   useEffect(() => {
+    if (!me || me.must_change_password || !admin) return;
+    let live = true;
+    api<Envelope<S["SyncPolicy"]>>("/v1/admin/settings/sync")
+      .then(({ data }) => {
+        if (live)
+          setAppliedPolicy((current) =>
+            !current || data.version > current.version ? data : current,
+          );
+      })
+      .catch((e) => {
+        if (live) setError(e.message);
+      });
+    return () => {
+      live = false;
+    };
+  }, [me, admin, refresh]);
+  useEffect(() => {
+    if (page === "settings") setPolicy(appliedPolicy);
+  }, [appliedPolicy, page]);
+  useEffect(() => {
     if (me && !me.must_change_password && admin && page === "settings")
-      Promise.all([
-        api<Envelope<S["SyncPolicy"]>>("/v1/admin/settings/sync"),
-        api<Envelope<S["AdminUserPage"]>>("/v1/admin/accounts"),
-      ])
-        .then(([p, a]) => {
-          setPolicy(p.data);
+      api<Envelope<S["AdminUserPage"]>>("/v1/admin/accounts")
+        .then((a) => {
           setAccounts(a.data.items);
         })
         .catch((e) => setError(e.message));
   }, [me, admin, page, refresh]);
+  const syncInterval = appliedPolicy
+    ? `${appliedPolicy.interval_min_seconds / 60}–${appliedPolicy.interval_max_seconds / 60} 分钟`
+    : admin
+      ? "读取中"
+      : "按组织策略";
   const notify = (message: string) => setToast(message);
   async function showPerson(id: string) {
     try {
@@ -740,8 +762,22 @@ export default function App() {
           <div className="sync-mini">
             <span className="live-dot" />
             <div>
-              <strong>批量同步已启用</strong>
-              <small>随机间隔 25–35 分钟</small>
+              <strong>
+                {appliedPolicy?.enabled
+                  ? "批量同步已启用"
+                  : appliedPolicy
+                    ? "组织采集已暂停"
+                    : admin
+                      ? "正在读取同步策略"
+                      : "设备批量同步"}
+              </strong>
+              <small>
+                {appliedPolicy
+                  ? `随机间隔 ${syncInterval}`
+                  : admin
+                    ? "正在读取间隔"
+                    : "由管理员配置同步间隔"}
+              </small>
             </div>
           </div>
           <button
@@ -1425,7 +1461,7 @@ export default function App() {
                         <h2>安装实例与同步状态</h2>
                         <p>Windows 账号仅是匹配线索，管理员确认后绑定员工</p>
                       </div>
-                      <span className="pill">每 25–35 分钟</span>
+                      <span className="pill">{appliedPolicy ? `组织策略 ${syncInterval}` : "按组织策略同步"}</span>
                     </div>
                     <div className="table-wrap">
                       <table>
@@ -1543,6 +1579,26 @@ export default function App() {
                           onSubmit={async (e) => {
                             e.preventDefault();
                             if (!policy) return;
+                            if (
+                              ![
+                                policy.interval_min_seconds,
+                                policy.interval_max_seconds,
+                              ].every(
+                                (seconds) =>
+                                  Number.isSafeInteger(seconds / 60) &&
+                                  seconds > 0,
+                              )
+                            ) {
+                              notify("请输入大于 0 的整数分钟");
+                              return;
+                            }
+                            if (
+                              policy.interval_max_seconds <
+                              policy.interval_min_seconds
+                            ) {
+                              notify("最长同步间隔不能小于最短同步间隔");
+                              return;
+                            }
                             try {
                               const result = await api<
                                 Envelope<S["SyncPolicy"]>
@@ -1559,6 +1615,7 @@ export default function App() {
                                 "PATCH",
                               );
                               setPolicy(result.data);
+                              setAppliedPolicy(result.data);
                               notify(
                                 isDemo
                                   ? "演示策略已保存（不会发送到真实设备）"
@@ -1575,11 +1632,13 @@ export default function App() {
                               <input
                                 aria-label="最短同步间隔"
                                 type="number"
-                                min={25}
-                                max={120}
-                                value={Math.round(
-                                  (policy?.interval_min_seconds ?? 1500) / 60,
-                                )}
+                                min={1}
+                                step={1}
+                                required
+                                disabled={!policy}
+                                value={
+                                  (policy?.interval_min_seconds ?? 1500) / 60
+                                }
                                 onChange={(e) =>
                                   setPolicy((p) =>
                                     p
@@ -1598,11 +1657,13 @@ export default function App() {
                               <input
                                 aria-label="最长同步间隔"
                                 type="number"
-                                min={35}
-                                max={120}
-                                value={Math.round(
-                                  (policy?.interval_max_seconds ?? 2100) / 60,
-                                )}
+                                min={1}
+                                step={1}
+                                required
+                                disabled={!policy}
+                                value={
+                                  (policy?.interval_max_seconds ?? 2100) / 60
+                                }
                                 onChange={(e) =>
                                   setPolicy((p) =>
                                     p
@@ -1619,8 +1680,12 @@ export default function App() {
                           </div>
                           <div className="setting-note">
                             <Check size={15} />
-                            每台设备每轮独立随机选择间隔
+                            可设置任意正整数分钟，每台设备每轮独立随机选择间隔
                           </div>
+                          <p className="muted">
+                            默认建议 25–35 分钟。旧版 Piora
+                            会保留其支持的兼容间隔，请升级客户端后验证自定义策略。
+                          </p>
                           <div className="key-values">
                             <span>
                               首次启动延迟<strong>1–5 分钟</strong>
@@ -1635,7 +1700,11 @@ export default function App() {
                               本地离线保留<strong>30 天 / 256 MiB</strong>
                             </span>
                           </div>
-                          <button className="primary" type="submit">
+                          <button
+                            className="primary"
+                            type="submit"
+                            disabled={!policy}
+                          >
                             保存同步策略
                           </button>
                         </form>

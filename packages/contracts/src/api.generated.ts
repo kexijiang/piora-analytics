@@ -852,12 +852,12 @@ export interface components {
             /** @description 组织采集是否启用 */
             enabled: boolean;
             /**
-             * @description 正常同步最小间隔
+             * @description 正常同步最小间隔，正整数秒；后台可设置任意正整数分钟
              * @default 1500
              */
             interval_min_seconds: number;
             /**
-             * @description 正常同步最大间隔
+             * @description 正常同步最大间隔，不小于最小间隔；不设业务时间上限
              * @default 2100
              */
             interval_max_seconds: number;
@@ -2979,6 +2979,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
+                "X-Piora-Capabilities"?: string;
                 "Idempotency-Key": string;
             };
             path?: never;
@@ -3267,7 +3268,9 @@ export interface operations {
     ingestBatch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Piora-Capabilities"?: string;
+            };
             path?: never;
             cookie?: never;
         };

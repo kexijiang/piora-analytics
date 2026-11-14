@@ -64,7 +64,14 @@ export function validateEventBusiness(e,now=Date.now()){
  if(e.event_type==='run.finished'&&p.outcome!=='interrupted'&&(p.duration_ms===null||p.finished_at===null))throw new Error('INVALID_EVENT');
 }
 export function validatePolicy(p){
- if(p.interval_min_seconds<1500||p.interval_max_seconds<p.interval_min_seconds||p.initial_delay_max_seconds<p.initial_delay_min_seconds||p.reconnect_max_seconds<p.reconnect_min_seconds)throw new Error('POLICY_INVALID');
+ const validInterval=s=>Number.isSafeInteger(s)&&s>0&&Number.isFinite(new Date(Date.now()+s*1000).getTime());
+ if(!validInterval(p.interval_min_seconds)||!validInterval(p.interval_max_seconds)||p.interval_max_seconds<p.interval_min_seconds||p.initial_delay_max_seconds<p.initial_delay_min_seconds||p.reconnect_max_seconds<p.reconnect_min_seconds)throw new Error('POLICY_INVALID');
+}
+/** Old collectors reject intervals outside their original 25–120 / 35–120 minute bounds. */
+export function policyForClient(policy,capabilities=''){
+ if(String(capabilities).split(',').map(s=>s.trim()).includes('configurable-sync-interval'))return policy;
+ const min=Math.min(7200,Math.max(1500,policy.interval_min_seconds));
+ return {...policy,interval_min_seconds:min,interval_max_seconds:Math.min(7200,Math.max(2100,min,policy.interval_max_seconds))};
 }
 export function acknowledgeBatch(sent,response){
  const all=[...response.accepted_event_ids,...response.duplicate_event_ids,...response.rejected_events.map(e=>e.event_id)],expected=new Set(sent);

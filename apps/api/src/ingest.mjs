@@ -14,6 +14,7 @@ import {
   validateEventBusiness,
   dayOf,
   splitDays,
+  policyForClient,
 } from "../../../packages/contracts/telemetry.mjs";
 export async function getPolicy(c, org) {
   return (
@@ -24,6 +25,9 @@ export async function getPolicy(c, org) {
       )
     ).rows[0]?.value ?? defaultPolicy
   );
+}
+async function getClientPolicy(c, org, req) {
+  return policyForClient(await getPolicy(c, org), req.headers['x-piora-capabilities']);
 }
 const future = (days) => new Date(Date.now() + days * 86400000);
 export async function register(c, body, req, config) {
@@ -114,7 +118,7 @@ export async function register(c, body, req, config) {
     organization_name: config.orgName,
     credential_id: body.credential.credential_id,
     credential_expires_at: new Date(cred.expires_at).toISOString(),
-    policy: await getPolicy(c, config.org),
+    policy: await getClientPolicy(c, config.org, req),
   };
 }
 export async function rotate(c, b, ctx, req, config) {
@@ -428,7 +432,7 @@ export async function quality(c, ctx, day, code) {
     [ctx.org, ctx.installation, day, code],
   );
 }
-export async function ingest(c, b, ctx) {
+export async function ingest(c, b, ctx, req) {
   if (
     !b ||
     typeof b !== "object" ||
@@ -483,7 +487,7 @@ export async function ingest(c, b, ctx) {
     duplicate_event_ids: [],
     rejected_events: [],
     retry_after_seconds: null,
-    policy: await getPolicy(c, ctx.org),
+    policy: await getClientPolicy(c, ctx.org, req),
     credential_rotation_due:
       new Date(ctx.credential.expires_at).getTime() - Date.now() < 7 * 86400000,
   };

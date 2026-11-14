@@ -49,6 +49,49 @@ test("真实浏览器登录、Cookie/CSRF、组织管理与报表 API", async ({
       page.getByRole("heading", { name: "使用总览", exact: true }),
     ).toBeVisible();
     await page.getByRole("button", { name: "组织设置", exact: true }).click();
+    const minSync = page.getByLabel("最短同步间隔"),
+      maxSync = page.getByLabel("最长同步间隔");
+    await expect(minSync).toHaveValue("25");
+    await minSync.fill("5");
+    await maxSync.fill("15");
+    await expect(page.locator(".sync-mini")).toContainText(
+      "随机间隔 25–35 分钟",
+    );
+    await page
+      .getByRole("button", { name: "保存同步策略", exact: true })
+      .click();
+    await expect(page.locator(".sync-mini")).toContainText(
+      "随机间隔 5–15 分钟",
+    );
+    await page.reload();
+    await page.getByRole("button", { name: "组织设置", exact: true }).click();
+    await expect(minSync).toHaveValue("5");
+    await expect(maxSync).toHaveValue("15");
+    await minSync.fill("180");
+    await maxSync.fill("1440");
+    await page
+      .getByRole("button", { name: "保存同步策略", exact: true })
+      .click();
+    await expect(page.locator(".sync-mini")).toContainText(
+      "随机间隔 180–1440 分钟",
+    );
+    await minSync.fill("20");
+    await maxSync.fill("5");
+    await page
+      .getByRole("button", { name: "保存同步策略", exact: true })
+      .click();
+    await expect(page.locator(".toast")).toContainText(
+      "最长同步间隔不能小于最短同步间隔",
+    );
+    await expect(page.locator(".sync-mini")).toContainText(
+      "随机间隔 180–1440 分钟",
+    );
+    await minSync.fill("1");
+    await maxSync.fill("1");
+    await page
+      .getByRole("button", { name: "保存同步策略", exact: true })
+      .click();
+    await expect(page.locator(".sync-mini")).toContainText("随机间隔 1–1 分钟");
     await page.getByRole("button", { name: "添加部门", exact: true }).click();
     await page.getByRole("dialog").getByLabel("名称").fill("浏览器创建部门");
     await page
