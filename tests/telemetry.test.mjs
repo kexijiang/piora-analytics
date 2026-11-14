@@ -8,7 +8,27 @@ import {
   validateEventBusiness,
   sumMetrics,
   csvCell,
+  defaultPolicy,
+  validatePolicy,
+  policyForClient,
 } from "../packages/contracts/telemetry.mjs";
+
+test("同步间隔可小于 25 分钟或大于 120 分钟，仍校验顺序和可表示时间", () => {
+  for (const [min, max] of [[60,60],[300,900],[10800,86400],[60*86400,90*86400]])
+    assert.doesNotThrow(() => validatePolicy({...defaultPolicy,interval_min_seconds:min,interval_max_seconds:max}));
+  for (const [min, max] of [[0,900],[-1,900],[900,300],[1.5,900],[60,Number.MAX_SAFE_INTEGER]])
+    assert.throws(() => validatePolicy({...defaultPolicy,interval_min_seconds:min,interval_max_seconds:max}), /POLICY_INVALID/);
+});
+
+test("旧客户端收到兼容策略，新客户端收到管理员保存的任意间隔", () => {
+  const short = {...defaultPolicy,version:2,interval_min_seconds:300,interval_max_seconds:900};
+  assert.deepEqual(policyForClient(short),{...short,interval_min_seconds:1500,interval_max_seconds:2100});
+  assert.equal(policyForClient(short,'other-feature, configurable-sync-interval'),short);
+  const long = {...short,interval_min_seconds:86400,interval_max_seconds:172800};
+  assert.deepEqual(policyForClient(long),{...long,interval_min_seconds:7200,interval_max_seconds:7200});
+  assert.equal(policyForClient(long,'configurable-sync-interval'),long);
+  assert.equal(short.interval_min_seconds,300);
+});
 test("跨午夜拆分并保留毫秒", () => {
   assert.deepEqual(
     splitDays("2026-11-12T15:59:50Z", "2026-11-12T16:00:10Z").map((x) => [

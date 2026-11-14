@@ -40,7 +40,7 @@ try {
     origin: "http://127.0.0.1:4318",
     development: true,
   });
-  await server.listen({ port: 4319, host: "127.0.0.1" });
+  await server.listen({ port: Number(process.env.UI_API_PORT ?? 4319), host: "127.0.0.1" });
   process.send?.("ready");
 } catch (error) {
   await stop();

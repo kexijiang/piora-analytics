@@ -6,7 +6,7 @@
 flowchart LR
   E[Windows Electron 主进程] --> Q[(本地 SQLite WAL)]
   N[Piora Node 模型/工具/命令管线] --> Q
-  Q --> U[单一上传器: 随机 25–35 分钟]
+  Q --> U[单一上传器: 按组织策略随机间隔，默认 25–35 分钟]
   U -->|TLS: 事件批次| A[Node.js API]
   A -->|一个事务| P[(PostgreSQL 18)]
   P --> W[独立 Worker]
