@@ -1437,7 +1437,7 @@ export default function App() {
                       {
                         title: "报告较旧",
                         value: health?.stale_report_count ?? 0,
-                        note: "超过 40 分钟未上报",
+                        note: "超过同步策略与缓冲窗口",
                       },
                       {
                         title: "聚合延迟",

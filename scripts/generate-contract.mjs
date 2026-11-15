@@ -75,7 +75,7 @@ add('AuditRow',{id,actor_id:id,action:str('管理动作',80),target_type:str('�
 add('ExportInput',{kind:en(['employee_daily','models','code'],'导出类型'),from:date('包含'),to:date('不包含'),employee_ids:list(uuid('员工'),'员工筛选',500),department_ids:list(uuid('部门'),'部门筛选',100),app_versions:list(str('版本',64),'版本筛选',30)});
 add('ExportJob',{id,status:en(['queued','running','completed','failed','expired'],'任务状态'),created_at:time('创建时间'),row_count:nil(count('导出行数')),expires_at:time('24 小时后过期'),download_path:nil(str('同源受保护下载路径',300)),error_code:nil(str('失败原因码',64))});
 add('Catalog',{employees:list(ref('Employee'),'员工',5000),departments:list(ref('Department'),'部门',500),app_versions:list(str('版本',64),'版本',100),sources:list(source,'来源',30),languages:list(str('语言',80),'语言',200)});
-add('HealthSummary',{installations:list(ref('Installation'),'安装实例',5000),unbound_count:count('未绑定数'),stale_report_count:count('超过 40 分钟未上报数，不等于离线'),rejected_events:count('范围内拒收数'),aggregation_lag_seconds:integer('服务端聚合延迟'),warning_codes:list(str('原因码',64),'异常',100)});
+add('HealthSummary',{installations:list(ref('Installation'),'安装实例',5000),unbound_count:count('未绑定数'),stale_report_count:count('超过组织最长同步间隔加 5 分钟后的未上报数；兼容旧客户端的判断窗口至少为 40 分钟，不等于离线'),rejected_events:count('范围内拒收数'),aggregation_lag_seconds:integer('服务端聚合延迟'),warning_codes:list(str('原因码',64),'异常',100)});
 
 const payloads = {
  'desktop.started':add('DesktopStarted',{reason:en(['manual','autostart','update','unknown'],'启动来源')}),
