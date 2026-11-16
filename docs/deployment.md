@@ -38,6 +38,95 @@ Compose 自动等待数据库健康，init 服务执行迁移并仅在空库创�
 
 API 默认映射 127.0.0.1；内网示例使用 BIND_ADDRESS=0.0.0.0，APP_PORT=4319。数据库不对宿主机暴露端口。健康检查为 `/health/ready`。Worker 没有独立健康检查，运行状态不代表已完成聚合。
 
+### 运维操作步骤（Linux / Bash）
+
+以下命令在同一个部署目录执行。首次准备 Docker Engine 和 Compose 插件，并确认能访问 Docker Hub 与 npm；防火墙只向需要访问的公司内网开放应用端口。源码部署需要 Git，镜像部署不需要 Node.js 或 npm 安装在宿主机。
+
+~~~sh
+docker --version
+docker compose version
+git clone -b codex/intranet-docker https://github.com/kexijiang/piora-analytics.git
+cd piora-analytics
+cp .env.docker.example .env
+chmod 600 .env
+~~~
+
+上述分支包含本次部署改造；合并后可使用包含该改造的主分支或已确认版本。编辑 `.env`，配置示例如下（占位内容必须替换）：
+
+~~~dotenv
+POSTGRES_PASSWORD=替换为随机十六进制密码
+ANALYTICS_PEPPER=替换为至少32字符随机字符串
+ANALYTICS_ORIGIN=http://analytics.internal:4319
+ALLOW_HTTP=true
+BIND_ADDRESS=0.0.0.0
+APP_PORT=4319
+IMAGE_NAME=piora-analytics
+APP_VERSION=latest
+INIT_ORG_NAME=公司名称
+INIT_ADMIN_USERNAME=admin
+INIT_ADMIN_PASSWORD=替换为至少12位初始密码
+~~~
+
+可分别运行 `openssl rand -hex 32` 生成数据库密码和 PEPPER。浏览器使用 IP 访问时，ANALYTICS_ORIGIN 也填写该 IP；使用域名时填写域名。端口变化时同步修改 APP_PORT 和 origin。不要提交或分享实际 `.env`。
+
+启动与验收：
+
+~~~sh
+bash scripts/start.sh local
+docker compose ps -a
+docker compose logs --tail=100 init api worker
+curl -f http://127.0.0.1:4319/health/ready
+~~~
+
+若更改 APP_PORT，调整 curl 端口；若仅绑定指定网卡 IP，使用该地址检查。
+
+| 服务 | 预期状态 |
+|---|---|
+| database | healthy |
+| init | Exited (0)，一次性任务正常完成 |
+| api | healthy |
+| worker | Up，日志无持续错误；仍需检查实际聚合结果 |
+
+访问配置的 ANALYTICS_ORIGIN，使用初始账号登录并修改密码。刷新页面确认会话保留。初始化完成后删除 `.env` 中的 INIT_ADMIN_PASSWORD，保留数据库密码和 PEPPER。首页或健康接口正常不代表真实设备已上报，采集验收需另外执行。
+
+日常操作：
+
+~~~sh
+docker compose ps -a
+docker compose logs -f --tail=100 api worker
+docker compose restart api worker
+# 停机，保留数据：
+docker compose down
+# 恢复服务：
+docker compose up -d --no-build --wait
+~~~
+
+不要执行 `docker compose down -v`，它会删除数据卷。不要随意修改部署目录或 Compose 项目名，否则可能启动另一套空数据库。
+
+升级前备份（下面的二进制重定向命令用于 Linux/Bash）：
+
+~~~sh
+mkdir -p backups
+chmod 700 backups
+backup="backups/piora-$(date +%Y%m%d-%H%M%S).dump"
+docker compose exec -T database pg_dump -U analytics -d piora_analytics -Fc > "$backup"
+# 必须确认上一条命令退出码为 0，再将备份复制到独立存储。
+~~~
+
+同时安全备份 `.env`，保持 PEPPER 不变。备份需要定期在隔离数据库恢复演练；不能仅凭文件存在认定可恢复。此仓库没有自动备份任务。
+
+源码升级：先获取并切换到已确认的新版本，在维护窗口执行以下步骤。先构建，成功后再停止旧应用；迁移时不让旧 API/Worker 继续访问数据库。
+
+~~~sh
+docker compose build
+docker compose stop api worker
+docker compose run --rm init
+# 仅在迁移成功后继续：
+docker compose up -d --no-build --wait
+~~~
+
+每步都检查退出码；迁移失败时停止升级并检查 init 日志，不继续启动新应用。镜像升级对应地先修改 APP_VERSION 并执行 `docker compose pull`，再执行停应用、init 和 up。数据库迁移后的回退需确认旧版本兼容性，不能直接假设换回旧镜像即可回退。
+
 ### 版本镜像与离线部署
 
 `bash scripts/build.sh` 构建当前工作区；`bash scripts/build.sh v1.2.0` 从已有 Git tag 构建，包含该 tag 的代码。IMAGE_NAME 可覆盖镜像名。指定版本镜像时，在 .env 中填写相同 IMAGE_NAME 与 APP_VERSION。
