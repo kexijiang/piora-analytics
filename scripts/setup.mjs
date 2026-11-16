@@ -9,6 +9,11 @@ import { defaultPolicy } from "../packages/contracts/telemetry.mjs";
 import readline from "node:readline/promises";
 const pool = createPool(process.env.DATABASE_URL);
 await migrate(pool);
+if (process.env.INIT_IF_EMPTY === "true" && (await pool.query("SELECT 1 FROM organizations")).rowCount) {
+  await pool.end();
+  console.log("Database migrated; existing organization preserved.");
+  process.exit(0);
+}
 const cli = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -34,7 +39,8 @@ if (
 await transaction(pool, async (c) => {
   await c.query("SELECT pg_advisory_xact_lock(71203002)");
   if ((await c.query("SELECT 1 FROM organizations")).rowCount)
-    throw new Error("Already initialized");
+    if (process.env.INIT_IF_EMPTY === "true") return;
+    else throw new Error("Already initialized");
   const org = uuid();
   await c.query("INSERT INTO organizations(id,name) VALUES($1,$2)", [
     org,

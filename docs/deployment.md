@@ -2,7 +2,7 @@
 
 ## 开发环境
 
-Node.js 24、npm、PostgreSQL 18。先 npm ci，再将 .env.example 复制为 .env，填写数据库连接、至少 32 字符随机 ANALYTICS_PEPPER 和同源 ANALYTICS_ORIGIN。开发默认看板 http://127.0.0.1:4318，API 4319；生产必须 HTTPS。
+Node.js 24、npm、PostgreSQL 18。先 npm ci，再将 .env.example 复制为 .env，填写数据库连接、至少 32 字符随机 ANALYTICS_PEPPER 和同源 ANALYTICS_ORIGIN。开发默认看板 http://127.0.0.1:4318，API 4319；默认生产使用 HTTPS；受信任内网可按下文显式启用 HTTP。
 
 数据库为空时执行一次初始化。首位管理员密码只通过临时环境传递，不使用固定默认值，也不通过命令行参数传递：
 
@@ -25,20 +25,36 @@ npm run dev
 
 ## 容器部署
 
-[Compose](../compose.yaml) 提供 PostgreSQL 18、API（含静态看板）、Worker 和私有导出卷。先在 .env 设置 POSTGRES_PASSWORD（使用 URL 安全的随机字符串）、ANALYTICS_PEPPER、真实 HTTPS 的 ANALYTICS_ORIGIN。
+公司受信任内网可显式启用 HTTP：复制 `.env.docker.example` 为 `.env`，填写 URL 安全的随机 POSTGRES_PASSWORD、至少 32 字符随机 ANALYTICS_PEPPER、INIT_ADMIN_PASSWORD（12–256 位），并将 ANALYTICS_ORIGIN 改为浏览器实际访问的地址，例如 `http://analytics.internal:4319`，不要带末尾斜线。HTTP 下密码和统计请求明文传输，适用于本次内网部署范围。公网使用 HTTPS，并关闭 ALLOW_HTTP。
 
 ~~~sh
-docker compose up -d database
-docker compose build
-docker compose run --rm -e INIT_ORG_NAME -e INIT_ADMIN_USERNAME -e INIT_ADMIN_PASSWORD api npm run setup
-docker compose up -d api worker
+cp .env.docker.example .env
+# 编辑 .env 后，本地源码构建并启动：
+bash scripts/start.sh local
+# 等价：docker compose build && docker compose up -d --no-build --wait
 ~~~
 
-三个 INIT_* 值通过宿主机安全环境提供；密码不放入仓库或 Compose 文件。构建是后台 Web 服务容器，不涉及 Piora 安装包。Compose 将 API 仅映射宿主机 127.0.0.1:4319；参考 [Caddy 配置](../deploy/Caddyfile.example) 提供 TLS，域名替换为企业真实域名。防火墙不对公网开放 PostgreSQL。
+Compose 自动等待数据库健康，init 服务执行迁移并仅在空库创建组织/管理员，随后启动 API（含看板）和 Worker。首次登录强制修改密码；初始化后可从 .env 移除 INIT_ADMIN_PASSWORD。后续 init 只迁移，不重置已有账号。不要运行两个不同版本的部署同时迁移同一数据库。
 
-基础 Compose 为便于首次初始化，API/Worker 与迁移使用同一专用数据库账号。正式运维应按职责拆分：API 仅 DML，Worker 需要分区维护权限，迁移使用受控 owner；不要将示例账号提升为企业数据库集群管理员。当前没有自动配置云资源、证书、备份目标或告警通知。
+API 默认映射 127.0.0.1；内网示例使用 BIND_ADDRESS=0.0.0.0，APP_PORT=4319。数据库不对宿主机暴露端口。健康检查为 `/health/ready`。Worker 没有独立健康检查，运行状态不代表已完成聚合。
 
-API 禁止记录请求体、Cookie 和 Authorization。设备明文批次最多 262144 字节；v1 不接收压缩请求（反向代理可压缩响应）。导出仅认证后下载，文件 24 小时后由 Worker 删除。同步和保留设置均通过 /v1/admin/settings/* 管理。
+### 版本镜像与离线部署
+
+`bash scripts/build.sh` 构建当前工作区；`bash scripts/build.sh v1.2.0` 从已有 Git tag 构建，包含该 tag 的代码。IMAGE_NAME 可覆盖镜像名。指定版本镜像时，在 .env 中填写相同 IMAGE_NAME 与 APP_VERSION。
+
+推送 `v*` tag 会触发 Release Image：质量检查、linux/amd64 镜像构建、隔离 Compose 启动检查通过后，发布 `ghcr.io/<仓库所有者>/piora-analytics:<tag>`。非预发布版本还更新 latest；GitHub Release 提供镜像 tar、SHA256SUMS、Compose 和配置示例。此流程参考 ai-code-tracker-server，但发布的是本仓库镜像。工作流文件存在不代表镜像已发布。
+
+~~~sh
+# .env 设置 IMAGE_NAME=ghcr.io/<仓库所有者>/piora-analytics、APP_VERSION=v1.2.0
+bash scripts/start.sh image
+# 或：docker compose pull && docker compose up -d --no-build --wait
+~~~
+
+私有 GHCR 包需要先 docker login ghcr.io。离线服务器下载 Release tar 后 `docker load -i <镜像文件.tar>`，还必须从联网机器预先导出并加载 `postgres:18` 镜像（应用 tar 不包含 PostgreSQL）。复制 compose.yaml 和配置文件后，运行 `docker compose up -d --no-build --pull never --wait`；有源码目录也可用 `bash scripts/start.sh offline`。镜像仅适用于 linux/amd64。
+
+数据保存在 pgdata、exports 命名卷中，更新时保持同一 Compose 项目名/目录。`docker compose down` 保留数据，`down -v` 会删除数据。升级前备份数据库；PEPPER 必须保持不变。生产备份、告警和权限拆分仍由运维配置，默认单 API、单 Worker。
+
+HTTPS 部署可参考 [Caddy 配置](../deploy/Caddyfile.example)，并将 ANALYTICS_ORIGIN 设置为 HTTPS 地址、ALLOW_HTTP=false。HTTP 与 HTTPS 使用不同会话 Cookie，切换后重新登录。
 
 ## 给 Windows Piora 分发配置
 
