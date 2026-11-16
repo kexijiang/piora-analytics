@@ -664,9 +664,72 @@ try {
   const legacyLong = (await call("POST","/v1/telemetry/batches",policyBatch(),200,{authorization:device})).json().data;
   assert.equal(legacyLong.policy.interval_min_seconds,7200);
   assert.equal(legacyLong.policy.interval_max_seconds,7200);
+  // A healthy long-interval collector must not be flagged by the old fixed
+  // 40-minute threshold. Only this disposable fixture installation is aged.
+  const healthVersion = "health-policy-boundary-fixture";
+  const savedInstallation = (
+    await db.pool.query(
+      "SELECT app_version,last_received_at FROM installations WHERE org_id=$1 AND id=$2",
+      [org, registration.installation_id],
+    )
+  ).rows[0];
+  await db.pool.query(
+    "UPDATE installations SET app_version=$3,last_received_at=now()-interval '60 minutes' WHERE org_id=$1 AND id=$2",
+    [org, registration.installation_id, healthVersion],
+  );
+  const healthForPolicy = async () =>
+    (
+      await call(
+        "GET",
+        `/v1/admin/analytics/health?from=${today}&to=${tomorrow}&app_versions=${healthVersion}`,
+      )
+    ).json().data;
+  const longHealth = await healthForPolicy();
+  assert.equal(longHealth.installations.length, 1);
+  assert.equal(
+    longHealth.stale_report_count,
+    "0",
+    "A 60-minute-old report is on time for a 180–1440-minute policy",
+  );
+  for (const [extraMinutes, expected] of [[4, "0"], [6, "1"]]) {
+    await db.pool.query(
+      "UPDATE installations SET last_received_at=now()-($3::text||' seconds')::interval WHERE org_id=$1 AND id=$2",
+      [org, registration.installation_id, longPolicy.interval_max_seconds + extraMinutes * 60],
+    );
+    assert.equal(
+      (await healthForPolicy()).stale_report_count,
+      expected,
+      "The long-policy health check must honor the five-minute buffer",
+    );
+  }
+  await db.pool.query(
+    "UPDATE installations SET last_received_at=now()-interval '60 minutes' WHERE org_id=$1 AND id=$2",
+    [org, registration.installation_id],
+  );
   await call("PATCH","/v1/admin/settings/sync",{policy:{...longPolicy,version:longPolicy.version+1,interval_min_seconds:900,interval_max_seconds:300},expected_revision:longPolicy.version,reason:"拒绝倒置范围"},422);
   await call("PATCH","/v1/admin/settings/sync",{policy:{...longPolicy,version:longPolicy.version+1,interval_min_seconds:0},expected_revision:longPolicy.version,reason:"拒绝零间隔"},400);
-  await updatePolicy({...syncBefore,version:longPolicy.version+1});
+  await updatePolicy({...shortPolicy,version:longPolicy.version+1});
+  for (const [ageMinutes, expected] of [[39, "0"], [41, "1"]]) {
+    await db.pool.query(
+      "UPDATE installations SET last_received_at=now()-($3::text||' minutes')::interval WHERE org_id=$1 AND id=$2",
+      [org, registration.installation_id, ageMinutes],
+    );
+    assert.equal(
+      (await healthForPolicy()).stale_report_count,
+      expected,
+      "A short organization policy must preserve the legacy-collector grace window",
+    );
+  }
+  await updatePolicy({...syncBefore,version:longPolicy.version+2});
+  assert.equal(
+    (await healthForPolicy()).stale_report_count,
+    "1",
+    "The same report is late under the restored default policy",
+  );
+  await db.pool.query(
+    "UPDATE installations SET app_version=$3,last_received_at=$4 WHERE org_id=$1 AND id=$2",
+    [org, registration.installation_id, savedInstallation.app_version, savedInstallation.last_received_at],
+  );
 
   const rotation = {
     rotation_id: uuid(),

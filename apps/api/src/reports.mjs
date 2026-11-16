@@ -15,6 +15,7 @@ import {
   dayOf,
   tokenNames,
 } from "../../../packages/contracts/telemetry.mjs";
+import { getPolicy } from "./ingest.mjs";
 const arr = (x) => (x === undefined ? [] : Array.isArray(x) ? x : [x]);
 const allowed = (filter, x) => !arr(filter).length || arr(filter).includes(x);
 export function range(
@@ -507,6 +508,12 @@ export async function report(c, id, q, params, ctx) {
     };
   }
   if (id === "reporthealth") {
+    const policy = await getPolicy(c, ctx.org);
+    // Keep the 40-minute grace floor for legacy collectors, whose compatible
+    // policy can still use 25–35 minutes when the configured interval is short.
+    const staleAfterMs =
+      Math.max(40 * 60, policy.interval_max_seconds + 5 * 60) * 1000;
+    const now = Date.now();
     const employeeDepartments = new Map(
       data.allEmployees.map((e) => [e.id, e.department_id]),
     );
@@ -534,7 +541,7 @@ export async function report(c, id, q, params, ctx) {
           inst.filter(
             (i) =>
               !i.last_received_at ||
-              Date.now() - Date.parse(i.last_received_at) > 2400000,
+              now - Date.parse(i.last_received_at) > staleAfterMs,
           ).length,
         ),
         rejected_events: rejected.rows[0].n,

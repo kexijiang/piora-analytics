@@ -1606,7 +1606,7 @@ export interface components {
             installations: components["schemas"]["Installation"][];
             /** @description 未绑定数；非负 int64 十进制字符串，最大 9223372036854775807 */
             unbound_count: string;
-            /** @description 超过 40 分钟未上报数，不等于离线；非负 int64 十进制字符串，最大 9223372036854775807 */
+            /** @description 超过组织最长同步间隔加 5 分钟后的未上报数；兼容旧客户端的判断窗口至少为 40 分钟，不等于离线；非负 int64 十进制字符串，最大 9223372036854775807 */
             stale_report_count: string;
             /** @description 范围内拒收数；非负 int64 十进制字符串，最大 9223372036854775807 */
             rejected_events: string;
