@@ -11,7 +11,6 @@ import {
 } from "./core.mjs";
 export const passwordHash = (password) =>
   hash(password, { memoryCost: 19456, timeCost: 2, parallelism: 1 });
-const cookie = "__Host-piora_analytics";
 export async function authenticate(c, req, role, config) {
   if (role === "public") return {};
   if (role === "device") {
@@ -38,7 +37,7 @@ export async function authenticate(c, req, role, config) {
     return { org: r.org_id, installation: r.installation_id, credential: r };
   }
   if (role === "enrollment") return {};
-  const raw = req.cookies[cookie];
+  const raw = req.cookies[config.cookieName];
   if (!raw) throw new ApiError(401, "AUTH_REQUIRED");
   const r = await one(
     c,
@@ -117,10 +116,10 @@ export async function authOperation(c, id, body, ctx, req, reply, config) {
         expires,
       ],
     );
-    reply.setCookie(cookie, session, {
+    reply.setCookie(config.cookieName, session, {
       path: "/",
       httpOnly: true,
-      secure: true,
+      secure: config.secureCookies,
       sameSite: "strict",
       maxAge: 43200,
     });
@@ -138,9 +137,9 @@ export async function authOperation(c, id, body, ctx, req, reply, config) {
     await c.query("UPDATE admin_sessions SET revoked_at=now() WHERE id=$1", [
       ctx.sessionId,
     ]);
-    reply.clearCookie(cookie, {
+    reply.clearCookie(config.cookieName, {
       path: "/",
-      secure: true,
+      secure: config.secureCookies,
       httpOnly: true,
       sameSite: "strict",
     });
@@ -172,10 +171,10 @@ export async function authOperation(c, id, body, ctx, req, reply, config) {
         secretHash(csrf, config.pepper),
       ],
     );
-    reply.setCookie(cookie, next, {
+    reply.setCookie(config.cookieName, next, {
       path: "/",
       httpOnly: true,
-      secure: true,
+      secure: config.secureCookies,
       sameSite: "strict",
       maxAge: Math.max(
         1,

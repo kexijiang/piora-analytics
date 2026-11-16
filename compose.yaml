@@ -13,26 +13,50 @@ services:
       timeout: 3s
       retries: 20
     restart: unless-stopped
+  init:
+    image: ${IMAGE_NAME:-piora-analytics}:${APP_VERSION:-latest}
+    build: .
+    command: ["npm", "run", "setup"]
+    environment:
+      DATABASE_URL: postgresql://analytics:${POSTGRES_PASSWORD}@database:5432/piora_analytics
+      INIT_IF_EMPTY: "true"
+      INIT_ORG_NAME: ${INIT_ORG_NAME:-Piora}
+      INIT_ADMIN_USERNAME: ${INIT_ADMIN_USERNAME:-admin}
+      INIT_ADMIN_PASSWORD: ${INIT_ADMIN_PASSWORD:-}
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
   api:
+    image: ${IMAGE_NAME:-piora-analytics}:${APP_VERSION:-latest}
     build: .
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://analytics:${POSTGRES_PASSWORD}@database:5432/piora_analytics
       ANALYTICS_PEPPER: ${ANALYTICS_PEPPER:?Set ANALYTICS_PEPPER}
-      ANALYTICS_ORIGIN: ${ANALYTICS_ORIGIN:?Set HTTPS origin}
+      ANALYTICS_ORIGIN: ${ANALYTICS_ORIGIN:?Set browser origin}
+      ALLOW_HTTP: ${ALLOW_HTTP:-false}
       HOST: 0.0.0.0
       PORT: 4319
       SERVE_DASHBOARD: "true"
       EXPORT_DIR: /exports
     ports:
-      - "127.0.0.1:4319:4319"
+      - "${BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-4319}:4319"
     volumes:
       - exports:/exports
     depends_on:
+      init:
+        condition: service_completed_successfully
       database:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4319/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     restart: unless-stopped
   worker:
+    image: ${IMAGE_NAME:-piora-analytics}:${APP_VERSION:-latest}
     build: .
     command: ["node", "apps/worker/src/main.mjs"]
     environment:
@@ -43,6 +67,8 @@ services:
     volumes:
       - exports:/exports
     depends_on:
+      init:
+        condition: service_completed_successfully
       database:
         condition: service_healthy
     restart: unless-stopped

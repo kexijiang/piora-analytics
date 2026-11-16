@@ -30,8 +30,13 @@ export async function createServer(pool, config) {
     throw new Error("ANALYTICS_PEPPER must contain at least 32 characters");
   if (!config.org || !config.origin)
     throw new Error("Organization and origin are required");
-  if (!config.origin.startsWith("https://") && !config.development)
+  if (!config.origin.startsWith("https://") && !config.development && !config.allowHttp)
     throw new Error("Production origin must be HTTPS");
+  const origin = new URL(config.origin);
+  if (!["http:", "https:"].includes(origin.protocol) || origin.origin !== config.origin)
+    throw new Error("ANALYTICS_ORIGIN must be an HTTP(S) origin without a path");
+  config.secureCookies = origin.protocol === "https:";
+  config.cookieName = config.secureCookies ? "__Host-piora_analytics" : "piora_analytics";
   config.dummyPasswordHash = await passwordHash("unmatchable-" + uuid());
   config.exportDir ??= path.join(root, ".local/exports");
   const app = Fastify({

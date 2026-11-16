@@ -12,6 +12,7 @@ const app = await createServer(pool, {
   orgName: org[0].name,
   pepper: process.env.ANALYTICS_PEPPER,
   origin: process.env.ANALYTICS_ORIGIN,
+  allowHttp: process.env.ALLOW_HTTP === "true",
   development: process.env.NODE_ENV !== "production",
   serveDashboard: process.env.SERVE_DASHBOARD === "true",
   exportDir: process.env.EXPORT_DIR ?? path.join(root, ".local/exports"),

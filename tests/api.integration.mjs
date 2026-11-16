@@ -20,7 +20,8 @@ const config = {
   orgName: "合成测试团队",
   pepper: "local-test-pepper-never-use-in-production",
   origin: "http://127.0.0.1:4318",
-  development: true,
+  development: false,
+  allowHttp: true,
   exportDir: path.join(root, ".verification/exports"),
 };
 let app,
@@ -45,6 +46,14 @@ try {
       { raw_days: 90, daily_months: 24, audit_days: 365, revision: 1 },
     ],
   );
+  await assert.rejects(createServer(db.pool, { ...config, allowHttp: false }), /HTTPS/);
+  const httpsApp = await createServer(db.pool, { ...config, origin: "https://analytics.example.com", allowHttp: false });
+  try {
+    const response = await httpsApp.inject({ method: "POST", url: "/v1/admin/auth/login", headers: { origin: "https://analytics.example.com" }, payload: { username: "admin", password: "Synthetic-password-123" } });
+    assert.equal(response.statusCode, 200);
+    assert.match(response.headers["set-cookie"], /^__Host-piora_analytics=/);
+    assert.match(response.headers["set-cookie"], /; Secure/);
+  } finally { await httpsApp.close(); }
   app = await createServer(db.pool, config);
   async function call(method, url, payload, status = 200, extra = {}) {
     const response = await app.inject({
@@ -65,6 +74,8 @@ try {
     username: "admin",
     password: "Synthetic-password-123",
   });
+  assert.match(login.headers["set-cookie"], /^piora_analytics=/);
+  assert.doesNotMatch(login.headers["set-cookie"], /; Secure/);
   session = login.headers["set-cookie"].split(";")[0];
   csrf = login.json().data.csrf_token;
   await call("GET", "/health/ready");

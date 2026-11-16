@@ -1,5 +1,7 @@
 # 本地验证记录
 
+2026-11-16 内网部署补充：新增显式 HTTP 会话配置、Compose 自动初始化/迁移及 tag 镜像发布工作流。Docker Desktop Linux 容器本地验收已通过：镜像构建、空库 Compose 启动、HTTP 浏览器登录/首次改密/刷新、保留卷重建容器及已改密码登录。仅使用独立合成数据；GHCR/Release 发布尚未执行。
+
 2026-11-16：[实际安装版 v0.5.11-beta.8 验收记录](verification/2026-11-16-installed-windows-beta8.md)。自然同步、重启保留截止时间、真实 Qwen 的两次人工提交、文件落盘计量、23 条离线事件自动补传及 CSV 均已核对；首次长间隔健康回归复现误报，修正后独立 PostgreSQL 接口测试通过。当前修复的最终 CI 结果以对应提交的 GitHub Actions 为准。
 
 2026-11-14 可配置同步间隔回归：9 项后端规则测试、完整 API + 独立 PostgreSQL 回归、两项浏览器场景和 React 类型检查通过。浏览器实际保存 5–15、180–1440、1–1 分钟并刷新恢复，倒置范围不能保存；旧客户端继续通过兼容策略上传。Piora 17 项相关测试与 desktop 类型检查通过。首次 HTTP 回归发现上报处理未转交能力请求头，补齐后通过；首次页面回归发现策略尚未加载就可编辑导致输入丢失，修正加载状态后通过。浏览器 API 使用隔离端口，未占用正在运行的本机联调服务。没有将当前 beta.5 记为支持新范围的新客户端。
@@ -46,8 +48,12 @@ npm run test:ui
 
 ## 尚未验证
 
-GitHub CI 状态以相应提交的 Actions 为准，本文件不预报未来结果。没有做 500 台容量压测、生产数据库备份恢复、Linux 容器/TLS 部署、真实付费模型逐供应商对账、Windows 安装包升级或员工实机多日试点。不要把本地夹具通过解释为生产部署完成。
+GitHub CI 状态以相应提交的 Actions 为准，本文件不预报未来结果。没有做 500 台容量压测、生产数据库备份恢复、生产服务器/TLS 部署、真实付费模型逐供应商对账、Windows 安装包升级或员工实机多日试点。不要把本地夹具通过解释为生产部署完成。
 
 后端初始提交 8ad50fd 的 [GitHub Actions](https://github.com/kexijiang/piora-analytics/actions/runs/43455329174) 已通过 quality、test:database、test:api 三项任务，包括 Linux PostgreSQL 18 与 Chromium 浏览器复测。后续提交需查看其各自工作流结果。
 
 时区修复提交 7bdb7d8 的 [GitHub Actions](https://github.com/kexijiang/piora-analytics/actions/runs/43461319975) 三项任务全部通过。Piora 另补充独立包源码依赖与 Electron/ASAR 隔离加载测试，16 项打包相关回归通过；文件差异预算也覆盖 20,000 行重写，14 项采集测试和 2 项共享模块测试复测通过。Piora 最终完整 CI 以 [PR #425](https://github.com/kexijiang/pi-desktop/pull/425) 的当前提交状态为准。
+
+本次内网改造本地验证：npm run check、npm run typecheck、npm test（9 项）、npm run build 和隔离 PostgreSQL 的 npm run test:api 全部通过；HTTP 生产显式启用、默认拒绝 HTTP、HTTPS Secure/__Host Cookie、HTTP 无 Secure 会话均纳入接口回归。Compose config 和 Release YAML 解析通过。首次类型检查/构建在 npm ci 尚未完成时失败，安装完成后重跑通过。后续 Docker 引擎修复后，容器冒烟通过；Release 发布未执行。
+
+本地 Docker 验收补充：2026-11-16，Docker Engine 29.6.2 / Docker Desktop Linux。Node 24 bookworm 镜像完成 npm ci 与 Vite 构建；独立 piora-compose-test 项目端口 14319，PostgreSQL 18 健康、init 退出 0、API 健康、Worker 运行且日志无错误。Edge 实际验证 HTTP 登录、首次改密、刷新会话保留，无 pageerror。浏览器脚本首次因未等待改密完成而过早刷新失败，修正等待弹窗关闭后从空库复测通过。保留卷 down/up 后仍只有 1 个组织、1 个管理员，修改后的密码可登录。镜像首次下载遇连接中断，重试下载完成后构建成功。没有验证真实设备采集、负载或 GitHub 镜像发布。
