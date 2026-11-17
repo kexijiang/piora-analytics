@@ -37,6 +37,8 @@ import {
 import type { components } from "../../../packages/contracts/src/api.generated";
 import { api, isDemo } from "./api";
 import { Chart } from "./Chart";
+import { EmployeeTable } from "./EmployeeTable";
+import { EnrollmentKeys } from "./EnrollmentKeys";
 type S = components["schemas"];
 type Envelope<T> = { data: T; meta?: S["ReportMeta"] };
 type Page = "overview" | "people" | "models" | "code" | "health" | "settings";
@@ -1735,33 +1737,11 @@ export default function App() {
                           <p className="muted">
                             不上传提示词、回复、代码、diff 或文件路径。
                           </p>
-                          <button
-                            className="secondary"
-                            onClick={async () => {
-                              try {
-                                const r = await api<
-                                  Envelope<S["EnrollmentCreated"]>
-                                >("/v1/admin/enrollment-keys", {
-                                  label: "后台创建接入凭证",
-                                  expires_at: new Date(
-                                    Date.now() + 7 * 86400000,
-                                  ).toISOString(),
-                                  max_registrations: 50,
-                                });
-                                setNewForm("secret");
-                                setNewName(r.data.secret);
-                              } catch (e) {
-                                notify((e as Error).message);
-                              }
-                            }}
-                          >
-                            <Plus size={15} />
-                            创建接入凭证
-                          </button>
                         </div>
                       </section>
                     </div>
-                    <section className="panel table-panel">
+                    <EnrollmentKeys />
+                    <section className="panel table-panel enrollment-panel" aria-label="员工管理">
                       <div className="panel-heading">
                         <div>
                           <h2>员工与部门</h2>
@@ -1798,34 +1778,7 @@ export default function App() {
                           </button>
                         </div>
                       </div>
-                      <div className="table-wrap">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>员工</th>
-                              <th>工号</th>
-                              <th>部门</th>
-                              <th>已绑定安装</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {catalog.employees.map((e) => (
-                              <tr key={e.id}>
-                                <td>{e.name}</td>
-                                <td className="muted">
-                                  {e.employee_no ?? "—"}
-                                </td>
-                                <td>
-                                  {catalog.departments.find(
-                                    (d) => d.id === e.department_id,
-                                  )?.name ?? "未分配"}
-                                </td>
-                                <td>{e.installation_count}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <EmployeeTable departments={catalog.departments} refresh={refresh} />
                     </section>
                     <section className="panel table-panel">
                       <div className="panel-heading">
@@ -2092,7 +2045,6 @@ export default function App() {
                     employee: "添加员工",
                     department: "添加部门",
                     account: "添加后台账号",
-                    secret: "接入凭证",
                   }[newForm]
                 }
               </h2>
@@ -2104,106 +2056,99 @@ export default function App() {
                 <X size={18} />
               </button>
             </div>
-            {newForm === "secret" ? (
-              <>
-                <p>仅本次显示，请通过企业安全配置分发。</p>
-                <textarea readOnly value={newName} rows={4} />
-              </>
-            ) : (
-              <form
-                className="settings-form"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  try {
-                    if (isDemo) {
-                      notify("演示模式：创建操作预览完成，不写入真实组织");
-                      setNewForm("");
-                      return;
-                    }
-                    const endpoint = {
-                      employee: "employees",
-                      department: "departments",
-                      account: "accounts",
-                    }[newForm];
-                    const body =
-                      newForm === "employee"
-                        ? {
-                            name: newName,
-                            employee_no: null,
-                            department_id: dept || null,
-                          }
-                        : newForm === "department"
-                          ? { name: newName }
-                          : {
-                              username: newName,
-                              display_name: newName,
-                              role: newRole,
-                              temporary_password: newPassword,
-                            };
-                    await api("/v1/admin/" + endpoint, body);
+            <form
+              className="settings-form"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  if (isDemo) {
+                    notify("演示模式：创建操作预览完成，不写入真实组织");
                     setNewForm("");
-                    setRefresh((r) => r + 1);
-                    notify("已创建");
-                  } catch (e) {
-                    notify((e as Error).message);
+                    return;
                   }
-                }}
-              >
+                  const endpoint = {
+                    employee: "employees",
+                    department: "departments",
+                    account: "accounts",
+                  }[newForm];
+                  const body =
+                    newForm === "employee"
+                      ? {
+                          name: newName,
+                          employee_no: null,
+                          department_id: dept || null,
+                        }
+                      : newForm === "department"
+                        ? { name: newName }
+                        : {
+                            username: newName,
+                            display_name: newName,
+                            role: newRole,
+                            temporary_password: newPassword,
+                          };
+                  await api("/v1/admin/" + endpoint, body);
+                  setNewForm("");
+                  setRefresh((r) => r + 1);
+                  notify("已创建");
+                } catch (e) {
+                  notify((e as Error).message);
+                }
+              }}
+            >
+              <label>
+                {newForm === "account" ? "账号" : "名称"}
+                <input
+                  required
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                />
+              </label>
+              {newForm === "employee" && (
                 <label>
-                  {newForm === "account" ? "账号" : "名称"}
-                  <input
-                    required
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                  />
+                  部门
+                  <select
+                    value={dept}
+                    onChange={(e) => setDept(e.target.value)}
+                  >
+                    <option value="">未分配</option>
+                    {catalog.departments.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
-                {newForm === "employee" && (
+              )}
+              {newForm === "account" && (
+                <>
                   <label>
-                    部门
+                    角色
                     <select
-                      value={dept}
-                      onChange={(e) => setDept(e.target.value)}
+                      value={newRole}
+                      onChange={(e) =>
+                        setNewRole(e.target.value as "admin" | "viewer")
+                      }
                     >
-                      <option value="">未分配</option>
-                      {catalog.departments.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
-                        </option>
-                      ))}
+                      <option value="viewer">只读查看者</option>
+                      <option value="admin">管理员</option>
                     </select>
                   </label>
-                )}
-                {newForm === "account" && (
-                  <>
-                    <label>
-                      角色
-                      <select
-                        value={newRole}
-                        onChange={(e) =>
-                          setNewRole(e.target.value as "admin" | "viewer")
-                        }
-                      >
-                        <option value="viewer">只读查看者</option>
-                        <option value="admin">管理员</option>
-                      </select>
-                    </label>
-                    <label>
-                      临时密码
-                      <input
-                        type="password"
-                        minLength={12}
-                        required
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                      />
-                    </label>
-                  </>
-                )}
-                <button className="primary" type="submit">
-                  创建
-                </button>
-              </form>
-            )}
+                  <label>
+                    临时密码
+                    <input
+                      type="password"
+                      minLength={12}
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                  </label>
+                </>
+              )}
+              <button className="primary" type="submit">
+                创建
+              </button>
+            </form>
           </section>
         </div>
       )}

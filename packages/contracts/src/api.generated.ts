@@ -7663,6 +7663,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 cursor?: string;
+                search?: string;
             };
             header?: never;
             path?: never;

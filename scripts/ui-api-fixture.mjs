@@ -33,6 +33,16 @@ try {
       { raw_days: 90, daily_months: 24, audit_days: 365, revision: 1 },
     ],
   );
+  for (let i = 1; i <= 25; i++) {
+    await db.pool.query(
+      "INSERT INTO enrollment_keys(id,org_id,label,secret_hash,expires_at,max_registrations,created_at) VALUES($1,$2,$3,$4,now()+interval '7 days',50,now()-($5::int * interval '1 minute'))",
+      [uuid(), org, "Search-Fixture-" + String(i).padStart(2, "0"), Buffer.alloc(32), i],
+    );
+  }
+  for (let i = 1; i <= 25; i++) {
+    await db.pool.query("INSERT INTO employees(id,org_id,name,employee_no) VALUES($1,$2,$3,$4)",
+      [uuid(), org, "员工合成" + String(i).padStart(2, "0"), "STAFF-" + String(i).padStart(2, "0")]);
+  }
   server = await createServer(db.pool, {
     org,
     orgName: "浏览器合成测试组织",

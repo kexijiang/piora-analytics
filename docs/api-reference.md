@@ -1602,6 +1602,7 @@
 |---|---|---|---|---|
 | limit | query | integer | false | 每页条数 |
 | cursor | query | string | false | opaque 游标；与筛选、排序绑定 |
+| search | query | string | false | 用途名称包含匹配，不区分大小写；空白忽略 |
 
 成功：HTTP 200，listEnrollmentResponse。
 

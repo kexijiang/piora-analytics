@@ -5,6 +5,7 @@ export const isDemo =
   new URLSearchParams(location.search).get("demo") === "1" ||
   import.meta.env.VITE_DEMO_MODE === "true";
 let csrf = "";
+const demoEnrollmentKeys: S["EnrollmentKey"][] = [];
 export function setCsrf(v: string) {
   csrf = v;
 }
@@ -321,13 +322,21 @@ function demo(url: string, body: unknown, method: string): unknown {
       ...b,
       revision: 1,
     };
-  } else if (p.endsWith("/employees"))
+  } else if (p.endsWith("/employees")) {
+    const filtered = data.employees.filter((employee) =>
+      (employee.name + " " + (employee.employee_no ?? ""))
+        .toLowerCase()
+        .includes((q.get("search") ?? "").trim().toLowerCase()),
+    );
+    const offset = Number(q.get("cursor") || 0),
+      size = Number(q.get("limit") || 20);
     result = {
-      items: data.employees,
-      total: String(data.employees.length),
-      next_cursor: null,
+      items: filtered.slice(offset, offset + size),
+      total: String(filtered.length),
+      next_cursor:
+        offset + size < filtered.length ? String(offset + size) : null,
     };
-  else if (p.endsWith("/departments"))
+  } else if (p.endsWith("/departments"))
     result = {
       items: data.departments,
       total: String(data.departments.length),
@@ -339,12 +348,41 @@ function demo(url: string, body: unknown, method: string): unknown {
       total: String(data.installations.length),
       next_cursor: null,
     };
-  else if (p.endsWith("/enrollment-keys") && method === "POST")
-    result = {
-      key: { id: crypto.randomUUID() },
-      secret: "DEMO-ONLY-THIS-IS-NOT-A-REAL-REGISTRATION-KEY",
-    };
-  else if (p.endsWith("/audit-logs"))
+  else if (p.endsWith("/enrollment-keys")) {
+    if (method === "POST") {
+      const input = body as S["EnrollmentInput"];
+      const key: S["EnrollmentKey"] = {
+        ...input,
+        id: crypto.randomUUID(),
+        used_registrations: 0,
+        revoked_at: null,
+        revision: 1,
+      };
+      demoEnrollmentKeys.unshift(key);
+      result = { key, secret: "DEMO-ONLY-THIS-IS-NOT-A-REAL-REGISTRATION-KEY" };
+    } else {
+      const filtered = demoEnrollmentKeys.filter((key) =>
+        key.label
+          .toLowerCase()
+          .includes((q.get("search") ?? "").trim().toLowerCase()),
+      );
+      const offset = Number(q.get("cursor") || 0),
+        size = Number(q.get("limit") || 20);
+      result = {
+        items: filtered.slice(offset, offset + size),
+        total: String(filtered.length),
+        next_cursor:
+          offset + size < filtered.length ? String(offset + size) : null,
+      };
+    }
+  } else if (p.includes("/enrollment-keys/") && p.endsWith("/revoke")) {
+    const key = demoEnrollmentKeys.find((k) => k.id === p.split("/")[4]);
+    if (key) {
+      key.revoked_at = new Date().toISOString();
+      key.revision++;
+    }
+    result = { ok: true };
+  } else if (p.endsWith("/audit-logs"))
     result = { items: [], next_cursor: null, total: "0" };
   return { data: result, meta };
 }
