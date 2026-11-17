@@ -72,6 +72,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 客户端能力发现 */
+        get: operations["serverCapabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/installations/identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 补报当前安装域身份 */
+        post: operations["updateIdentity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/settings/identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 域账号自动匹配规则 */
+        get: operations["getIdentityPolicy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 修改域账号自动匹配规则 */
+        patch: operations["updateIdentityPolicy"];
+        trace?: never;
+    };
     "/v1/installations/register": {
         parameters: {
             query?: never;
@@ -1033,6 +1085,72 @@ export interface components {
             /** @description 客户端生成的 32 随机字节 base64url；注册前使用 DPAPI 保存；仅认证接口可携带 */
             secret: string;
         };
+        WindowsIdentity: {
+            /**
+             * @description 客户端报告的账号类型，不是身份认证
+             * @enum {string}
+             */
+            account_type: "domain" | "local" | "unknown";
+            domain: string | null;
+            account_name: string | null;
+            /**
+             * @description 采集来源
+             * @enum {string}
+             */
+            source: "windows_logon" | "unavailable";
+        };
+        IdentityRule: {
+            /** @description 允许的域，大小写不敏感 */
+            domain: string;
+            /**
+             * @description 工号格式，保留前导零
+             * @enum {string}
+             */
+            format: "digits" | "alphanumeric";
+            /**
+             * @description 登录名大小写归一化
+             * @enum {string}
+             */
+            case: "preserve" | "upper" | "lower";
+        };
+        IdentityPolicy: {
+            /** @description 版本 */
+            version: number;
+            /** @description 自动关联是否启用 */
+            enabled: boolean;
+            /** @description 是否自动创建员工 */
+            auto_create: boolean;
+            /** @description 允许的域及工号校验规则；同一组织内工号全局唯一 */
+            rules: components["schemas"]["IdentityRule"][];
+        };
+        IdentityPolicyUpdate: {
+            policy: components["schemas"]["IdentityPolicy"];
+            /** @description 当前版本 */
+            expected_revision: number;
+            /** @description 修改原因 */
+            reason: string;
+        };
+        IdentityResult: {
+            identity: components["schemas"]["WindowsIdentity"] | null;
+            /**
+             * @description 匹配结果
+             * @enum {string}
+             */
+            state: "missing" | "local" | "unknown" | "disabled" | "domain_not_allowed" | "invalid_account" | "employee_missing" | "employee_archived" | "identity_conflict" | "binding_preserved" | "matched";
+            employee_id: string | null;
+            /**
+             * @description 当前绑定来源
+             * @enum {string}
+             */
+            binding_source: "none" | "manual" | "domain";
+        };
+        IdentityUpdate: {
+            identity: components["schemas"]["WindowsIdentity"];
+        };
+        ServerCapabilities: {
+            /** @description 能力列表 */
+            capabilities: "windows-domain-identity-v1"[];
+        };
         RegisterInput: {
             /**
              * Format: uuid
@@ -1060,6 +1178,7 @@ export interface components {
             protocol_version: "1.0";
             /** @description 客户端能力 */
             capabilities: ("desktop_activity" | "query" | "model_usage" | "file_write" | "file_edit")[];
+            windows_identity?: components["schemas"]["WindowsIdentity"];
         };
         RegisterResult: {
             /**
@@ -1136,6 +1255,7 @@ export interface components {
             coverage: components["schemas"]["Coverage"];
             /** @description 版本 */
             revision: number;
+            identity_status?: components["schemas"]["IdentityResult"];
         };
         Binding: {
             /**
@@ -2274,6 +2394,22 @@ export interface components {
             data: components["schemas"]["Ok"];
             meta: components["schemas"]["Meta"];
         };
+        serverCapabilitiesResponse: {
+            data: components["schemas"]["ServerCapabilities"];
+            meta: components["schemas"]["Meta"];
+        };
+        updateIdentityResponse: {
+            data: components["schemas"]["IdentityResult"];
+            meta: components["schemas"]["Meta"];
+        };
+        getIdentityPolicyResponse: {
+            data: components["schemas"]["IdentityPolicy"];
+            meta: components["schemas"]["Meta"];
+        };
+        updateIdentityPolicyResponse: {
+            data: components["schemas"]["IdentityPolicy"];
+            meta: components["schemas"]["Meta"];
+        };
         registerInstallationResponse: {
             data: components["schemas"]["RegisterResult"];
             meta: components["schemas"]["Meta"];
@@ -2886,6 +3022,514 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["changePasswordResponse"];
+                };
+            };
+            /** @description 参数或协议格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 身份失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 权限不足或安装已撤销 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 版本/幂等/有效期冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 请求体过大 */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 业务规则或查询保留范围不满足 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 限流；遵守 Retry-After */
+            429: {
+                headers: {
+                    /** @description 整数秒；存在时优先于本地退避 */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 依赖不可用；不得确认未持久事件 */
+            503: {
+                headers: {
+                    /** @description 整数秒；存在时优先于本地退避 */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    serverCapabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "data": {
+                     *         "capabilities": []
+                     *       },
+                     *       "meta": {
+                     *         "request_id": "10000000-0000-4000-8000-000000000001",
+                     *         "server_time": "2026-11-13T02:00:00.000Z"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["serverCapabilitiesResponse"];
+                };
+            };
+            /** @description 参数或协议格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 身份失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 权限不足或安装已撤销 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 版本/幂等/有效期冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 请求体过大 */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 业务规则或查询保留范围不满足 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 限流；遵守 Retry-After */
+            429: {
+                headers: {
+                    /** @description 整数秒；存在时优先于本地退避 */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 依赖不可用；不得确认未持久事件 */
+            503: {
+                headers: {
+                    /** @description 整数秒；存在时优先于本地退避 */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateIdentity: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "identity": {
+                 *         "account_type": "domain",
+                 *         "domain": null,
+                 *         "account_name": null,
+                 *         "source": "windows_logon"
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["IdentityUpdate"];
+            };
+        };
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "data": {
+                     *         "identity": null,
+                     *         "state": "missing",
+                     *         "employee_id": null,
+                     *         "binding_source": "none"
+                     *       },
+                     *       "meta": {
+                     *         "request_id": "10000000-0000-4000-8000-000000000001",
+                     *         "server_time": "2026-11-13T02:00:00.000Z"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["updateIdentityResponse"];
+                };
+            };
+            /** @description 参数或协议格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 身份失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 权限不足或安装已撤销 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 版本/幂等/有效期冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 请求体过大 */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 业务规则或查询保留范围不满足 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 限流；遵守 Retry-After */
+            429: {
+                headers: {
+                    /** @description 整数秒；存在时优先于本地退避 */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 依赖不可用；不得确认未持久事件 */
+            503: {
+                headers: {
+                    /** @description 整数秒；存在时优先于本地退避 */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getIdentityPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "data": {
+                     *         "version": 0,
+                     *         "enabled": false,
+                     *         "auto_create": false,
+                     *         "rules": []
+                     *       },
+                     *       "meta": {
+                     *         "request_id": "10000000-0000-4000-8000-000000000001",
+                     *         "server_time": "2026-11-13T02:00:00.000Z"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["getIdentityPolicyResponse"];
+                };
+            };
+            /** @description 参数或协议格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 身份失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 权限不足或安装已撤销 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 版本/幂等/有效期冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 请求体过大 */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 业务规则或查询保留范围不满足 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 限流；遵守 Retry-After */
+            429: {
+                headers: {
+                    /** @description 整数秒；存在时优先于本地退避 */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 依赖不可用；不得确认未持久事件 */
+            503: {
+                headers: {
+                    /** @description 整数秒；存在时优先于本地退避 */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    updateIdentityPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+                "X-CSRF-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "policy": {
+                 *         "version": 0,
+                 *         "enabled": false,
+                 *         "auto_create": false,
+                 *         "rules": []
+                 *       },
+                 *       "expected_revision": 0,
+                 *       "reason": "示例值"
+                 *     }
+                 */
+                "application/json": components["schemas"]["IdentityPolicyUpdate"];
+            };
+        };
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "data": {
+                     *         "version": 0,
+                     *         "enabled": false,
+                     *         "auto_create": false,
+                     *         "rules": []
+                     *       },
+                     *       "meta": {
+                     *         "request_id": "10000000-0000-4000-8000-000000000001",
+                     *         "server_time": "2026-11-13T02:00:00.000Z"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["updateIdentityPolicyResponse"];
                 };
             };
             /** @description 参数或协议格式错误 */

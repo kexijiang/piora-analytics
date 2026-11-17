@@ -65,15 +65,16 @@ export async function employees(c, org) {
   ).rows.map(employeeDTO);
 }
 export async function installations(c, org) {
-  return clean(
+  const rows = clean(
     (
       await c.query(
-        "SELECT i.*,b.employee_id FROM installations i LEFT JOIN installation_bindings b ON b.org_id=i.org_id AND b.installation_id=i.id AND b.valid_days @> (now() AT TIME ZONE 'Asia/Shanghai')::date WHERE i.org_id=$1 ORDER BY i.windows_username,i.id",
+        "SELECT i.*,b.employee_id,b.source AS binding_source,di.claim AS identity_claim,di.state AS identity_state FROM installations i LEFT JOIN installation_bindings b ON b.org_id=i.org_id AND b.installation_id=i.id AND b.valid_days @> (now() AT TIME ZONE 'Asia/Shanghai')::date LEFT JOIN installation_identities di ON di.org_id=i.org_id AND di.installation_id=i.id WHERE i.org_id=$1 ORDER BY i.windows_username,i.id",
         [org],
       )
     ).rows,
   ).map((r) => ({
     id: r.id,
+    identity_status: {identity:r.identity_claim??null,state:r.binding_source==="manual"?"binding_preserved":r.identity_state??"missing",employee_id:r.employee_id??null,binding_source:r.binding_source??"none"},
     windows_username: r.windows_username,
     device_label: r.device_label,
     employee_id: r.employee_id ?? null,
@@ -89,6 +90,7 @@ export async function installations(c, org) {
       data_through: r.last_event_at,
     },
   }));
+  return rows;
 }
 export async function loadReport(c, org, q) {
   await validateReportRange(c, org, q);

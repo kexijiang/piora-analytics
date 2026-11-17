@@ -88,6 +88,93 @@
     }
   },
   {
+    "name": "serverCapabilities response",
+    "schema": "serverCapabilitiesResponse",
+    "value": {
+      "data": {
+        "capabilities": []
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "updateIdentity request",
+    "schema": "IdentityUpdate",
+    "value": {
+      "identity": {
+        "account_type": "domain",
+        "domain": null,
+        "account_name": null,
+        "source": "windows_logon"
+      }
+    }
+  },
+  {
+    "name": "updateIdentity response",
+    "schema": "updateIdentityResponse",
+    "value": {
+      "data": {
+        "identity": null,
+        "state": "missing",
+        "employee_id": null,
+        "binding_source": "none"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "getIdentityPolicy response",
+    "schema": "getIdentityPolicyResponse",
+    "value": {
+      "data": {
+        "version": 0,
+        "enabled": false,
+        "auto_create": false,
+        "rules": []
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
+    "name": "updateIdentityPolicy request",
+    "schema": "IdentityPolicyUpdate",
+    "value": {
+      "policy": {
+        "version": 0,
+        "enabled": false,
+        "auto_create": false,
+        "rules": []
+      },
+      "expected_revision": 0,
+      "reason": "示例值"
+    }
+  },
+  {
+    "name": "updateIdentityPolicy response",
+    "schema": "updateIdentityPolicyResponse",
+    "value": {
+      "data": {
+        "version": 0,
+        "enabled": false,
+        "auto_create": false,
+        "rules": []
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
     "name": "registerInstallation request",
     "schema": "RegisterInput",
     "value": {

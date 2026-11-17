@@ -145,6 +145,10 @@ bash scripts/start.sh image
 
 HTTPS 部署可参考 [Caddy 配置](../deploy/Caddyfile.example)，并将 ANALYTICS_ORIGIN 设置为 HTTPS 地址、ALLOW_HTTP=false。HTTP 与 HTTPS 使用不同会话 Cookie，切换后重新登录。
 
+## 域账号自动归属
+
+升级并执行 0002 迁移后，在组织设置配置允许域和工号规则。客户端须支持域身份上报；旧客户端仍需人工关联。具体协议、历史生效规则及验证边界见[域账号自动关联](domain-identity.md)。
+
 ## 给 Windows Piora 分发配置
 
 1. 管理员创建部门/员工，生成有限次数、有限期限的 enrollment key。

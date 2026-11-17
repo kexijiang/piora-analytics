@@ -1,3 +1,4 @@
+import { identityPolicy, updateIdentityPolicy } from "./identity.mjs";
 import {
   ApiError,
   one,
@@ -277,11 +278,11 @@ export async function adminOperation(c, id, b, q, p, ctx) {
       Date.parse(b.valid_from) < Date.now() - 731 * 86400000
     )
       throw new ApiError(422, "RANGE_OUT_OF_RETENTION");
-    await one(
-      c,
-      "SELECT id FROM employees WHERE org_id=$1 AND id=$2 AND status='active'",
-      [ctx.org, b.employee_id],
-    );
+    // Identity matching locks installation before employee; use the same order.
+    if (id === "correctBinding") {
+      const binding = await one(c, "SELECT installation_id FROM installation_bindings WHERE org_id=$1 AND id=$2", [ctx.org, p.id]);
+      await one(c, "SELECT id FROM installations WHERE org_id=$1 AND id=$2 FOR UPDATE", [ctx.org, binding.installation_id]);
+    }
     const old = await locked(
         c,
         id === "createBinding" ? "installations" : "installation_bindings",
@@ -291,6 +292,11 @@ export async function adminOperation(c, id, b, q, p, ctx) {
       ),
       key = id === "createBinding" ? uuid() : p.id,
       inst = id === "createBinding" ? p.id : old.installation_id;
+    await one(
+      c,
+      "SELECT id FROM employees WHERE org_id=$1 AND id=$2 AND status='active' FOR UPDATE",
+      [ctx.org, b.employee_id],
+    );
     if (id === "createBinding")
       await c.query(
         "INSERT INTO installation_bindings(id,org_id,installation_id,employee_id,valid_days,reason) VALUES($1,$2,$3,$4,daterange($5::date,$6::date,'[)'),$7)",
@@ -298,7 +304,7 @@ export async function adminOperation(c, id, b, q, p, ctx) {
       );
     else
       await c.query(
-        "UPDATE installation_bindings SET employee_id=$3,valid_days=daterange($4::date,$5::date,'[)'),reason=$6,revision=revision+1 WHERE org_id=$1 AND id=$2",
+        "UPDATE installation_bindings SET source='manual',employee_id=$3,valid_days=daterange($4::date,$5::date,'[)'),reason=$6,revision=revision+1 WHERE org_id=$1 AND id=$2",
         [ctx.org, key, b.employee_id, b.valid_from, b.valid_to, b.reason],
       );
     await c.query(
@@ -374,6 +380,8 @@ export async function adminOperation(c, id, b, q, p, ctx) {
     await audit(c, ctx, id, "enrollment", p.id, b.reason);
     return { ok: true };
   }
+  if (id === "getIdentityPolicy") return identityPolicy(c, ctx.org);
+  if (id === "updateIdentityPolicy") return updateIdentityPolicy(c,b,ctx);
   if (id === "getSync") return getPolicy(c, ctx.org);
   if (id === "getRetention")
     return (

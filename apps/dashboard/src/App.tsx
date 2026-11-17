@@ -1,3 +1,5 @@
+import { BindingDialog } from "./BindingDialog";
+import { IdentitySettings, identityLabel } from "./IdentitySettings";
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
@@ -233,7 +235,6 @@ export default function App() {
   const [person, setPerson] = useState<S["EmployeeDetail"] | null>(null),
     [query, setQuery] = useState<S["QueryDetail"] | null>(null),
     [bind, setBind] = useState<S["Installation"] | null>(null),
-    [bindEmployee, setBindEmployee] = useState(""),
     [policy, setPolicy] = useState<S["SyncPolicy"] | null>(null),
     [appliedPolicy, setAppliedPolicy] = useState<S["SyncPolicy"] | null>(null),
     [accounts, setAccounts] = useState<S["AdminUser"][]>([]),
@@ -537,7 +538,11 @@ export default function App() {
     [models, dark],
   );
   const activeMetrics = overview?.metrics;
-  const showEmpty = demoState === "empty" || (!loading && daily.total === "0"),
+  const showEmpty =
+      demoState === "empty" ||
+      (!loading &&
+        daily.total === "0" &&
+        (page === "people" || !meta?.coverage.last_received_at)),
     showError = demoState === "error" || !!error;
   const cards = [
     {
@@ -970,6 +975,14 @@ export default function App() {
               </span>
             </div>
           )}
+          {page === "overview" &&
+            overview &&
+            Number(overview.unconfirmed_installations) > 0 && (
+              <div className="panel identity-notice" role="status">
+                已接入 {overview.unconfirmed_installations}{" "}
+                台未关联员工的设备，设备数据仍计入总览。可在组织设置配置域账号规则，或到采集健康手动关联。
+              </div>
+            )}
           {showError ? (
             <div className="empty-state">
               <AlertCircle size={32} />
@@ -1461,9 +1474,13 @@ export default function App() {
                     <div className="panel-heading">
                       <div>
                         <h2>安装实例与同步状态</h2>
-                        <p>Windows 账号仅是匹配线索，管理员确认后绑定员工</p>
+                        <p>允许的域账号可自动关联；身份冲突可由管理员纠错</p>
                       </div>
-                      <span className="pill">{appliedPolicy ? `组织策略 ${syncInterval}` : "按组织策略同步"}</span>
+                      <span className="pill">
+                        {appliedPolicy
+                          ? `组织策略 ${syncInterval}`
+                          : "按组织策略同步"}
+                      </span>
                     </div>
                     <div className="table-wrap">
                       <table>
@@ -1522,6 +1539,19 @@ export default function App() {
                                 >
                                   {i.employee_id ? "已绑定" : "待绑定"}
                                 </Badge>
+                                <div className="muted">
+                                  {identityLabel(i.identity_status?.state)}
+                                  {i.identity_status?.binding_source ===
+                                  "domain"
+                                    ? " · 自动关联"
+                                    : ""}
+                                </div>
+                                {i.identity_status?.identity?.domain && (
+                                  <div className="muted">
+                                    {i.identity_status.identity.domain}\
+                                    {i.identity_status.identity.account_name}
+                                  </div>
+                                )}
                               </td>
                               <td>
                                 {admin ? (
@@ -1529,11 +1559,6 @@ export default function App() {
                                     className="text-button"
                                     onClick={() => {
                                       setBind(i);
-                                      setBindEmployee(
-                                        i.employee_id ??
-                                          catalog.employees[0]?.id ??
-                                          "",
-                                      );
                                     }}
                                   >
                                     <Link2 size={14} />
@@ -1740,12 +1765,15 @@ export default function App() {
                         </div>
                       </section>
                     </div>
+                    <IdentitySettings admin={admin} />
                     <EnrollmentKeys />
                     <section className="panel table-panel enrollment-panel" aria-label="员工管理">
                       <div className="panel-heading">
                         <div>
                           <h2>员工与部门</h2>
-                          <p>先创建员工，再到采集健康中绑定安装</p>
+                          <p>
+                            可通过域账号规则自动关联；个人设备也可先创建员工，再手动绑定
+                          </p>
                           <p>
                             已建部门：
                             {catalog.departments.length
@@ -1974,66 +2002,23 @@ export default function App() {
         </div>
       )}
       {bind && (
-        <div className="modal-backdrop">
-          <section className="modal" role="dialog" aria-label="绑定员工">
-            <div className="panel-heading">
-              <h2>确认安装归属</h2>
-              <button
-                className="icon-button"
-                aria-label="关闭绑定"
-                onClick={() => setBind(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <p className="muted">
-              {bind.device_label} · {bind.windows_username}
-            </p>
-            <form
-              className="settings-form"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  await api(
-                    "/v1/admin/installations/" + bind.id + "/bindings",
-                    {
-                      employee_id: bindEmployee,
-                      valid_from: from,
-                      valid_to: null,
-                      reason: "管理员在采集健康中确认安装归属",
-                      expected_revision: bind.revision,
-                    },
-                  );
-                  setBind(null);
-                  setRefresh((r) => r + 1);
-                  notify("归属已保存；已有重叠绑定请通过绑定历史纠错接口调整");
-                } catch (e) {
-                  notify((e as Error).message);
-                }
-              }}
-            >
-              <label>
-                归属员工
-                <select
-                  value={bindEmployee}
-                  onChange={(e) => setBindEmployee(e.target.value)}
-                >
-                  {catalog.employees.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.name} · {e.employee_no}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <p className="muted">
-                从 {from} 起生效。相同日期已有归属时服务端会拒绝重叠绑定。
-              </p>
-              <button className="primary" type="submit">
-                确认绑定
-              </button>
-            </form>
-          </section>
-        </div>
+        <BindingDialog
+          installation={bind}
+          employees={catalog.employees}
+          from={from}
+          onClose={() => setBind(null)}
+          onCreate={() => {
+            setBind(null);
+            setPage("settings");
+            setNewForm("employee");
+            setNewName("");
+          }}
+          onSaved={() => {
+            setBind(null);
+            setRefresh((r) => r + 1);
+            notify("归属已保存，人工确认结果优先");
+          }}
+        />
       )}
       {newForm && (
         <div className="modal-backdrop">

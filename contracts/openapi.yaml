@@ -426,6 +426,431 @@ paths:
             example:
               current_password: 示例值
               new_password: 示例值示例值示例值示例值
+  /v1/capabilities:
+    get:
+      operationId: serverCapabilities
+      summary: 客户端能力发现
+      tags:
+        - capabilities
+      parameters: []
+      security: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/serverCapabilitiesResponse"
+              example:
+                data:
+                  capabilities: []
+                meta:
+                  request_id: 10000000-0000-4000-8000-000000000001
+                  server_time: 2026-11-13T02:00:00.000Z
+        "400":
+          description: 参数或协议格式错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 身份失效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 权限不足或安装已撤销
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: 版本/幂等/有效期冲突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: 请求体过大
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: 业务规则或查询保留范围不满足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 限流；遵守 Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: 整数秒；存在时优先于本地退避
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 7200
+        "503":
+          description: 依赖不可用；不得确认未持久事件
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: 整数秒；存在时优先于本地退避
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 7200
+      x-required-role: public
+      x-business-rules: 见 docs/api-behavior.md；安装/组织归属来自认证上下文，不接受客户端 employee_id
+  /v1/installations/identity:
+    post:
+      operationId: updateIdentity
+      summary: 补报当前安装域身份
+      tags:
+        - installations
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            description: 一次操作一个键；重试保持不变，24 小时内相同键不同内容为冲突
+            minLength: 1
+            maxLength: 128
+      security:
+        - InstallationToken: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/updateIdentityResponse"
+              example:
+                data:
+                  identity: null
+                  state: missing
+                  employee_id: null
+                  binding_source: none
+                meta:
+                  request_id: 10000000-0000-4000-8000-000000000001
+                  server_time: 2026-11-13T02:00:00.000Z
+        "400":
+          description: 参数或协议格式错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 身份失效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 权限不足或安装已撤销
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: 版本/幂等/有效期冲突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: 请求体过大
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: 业务规则或查询保留范围不满足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 限流；遵守 Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: 整数秒；存在时优先于本地退避
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 7200
+        "503":
+          description: 依赖不可用；不得确认未持久事件
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: 整数秒；存在时优先于本地退避
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 7200
+      x-required-role: device
+      x-business-rules: 见 docs/api-behavior.md；安装/组织归属来自认证上下文，不接受客户端 employee_id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdentityUpdate"
+            example:
+              identity:
+                account_type: domain
+                domain: null
+                account_name: null
+                source: windows_logon
+  /v1/admin/settings/identity:
+    get:
+      operationId: getIdentityPolicy
+      summary: 域账号自动匹配规则
+      tags:
+        - admin
+      parameters: []
+      security:
+        - AdminSession: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/getIdentityPolicyResponse"
+              example:
+                data:
+                  version: 0
+                  enabled: false
+                  auto_create: false
+                  rules: []
+                meta:
+                  request_id: 10000000-0000-4000-8000-000000000001
+                  server_time: 2026-11-13T02:00:00.000Z
+        "400":
+          description: 参数或协议格式错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 身份失效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 权限不足或安装已撤销
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: 版本/幂等/有效期冲突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: 请求体过大
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: 业务规则或查询保留范围不满足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 限流；遵守 Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: 整数秒；存在时优先于本地退避
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 7200
+        "503":
+          description: 依赖不可用；不得确认未持久事件
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: 整数秒；存在时优先于本地退避
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 7200
+      x-required-role: admin
+      x-business-rules: 见 docs/api-behavior.md；安装/组织归属来自认证上下文，不接受客户端 employee_id
+    patch:
+      operationId: updateIdentityPolicy
+      summary: 修改域账号自动匹配规则
+      tags:
+        - admin
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            description: 一次操作一个键；重试保持不变，24 小时内相同键不同内容为冲突
+            minLength: 1
+            maxLength: 128
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+            description: 当前会话 CSRF token
+            minLength: 1
+            maxLength: 128
+      security:
+        - AdminSession: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/updateIdentityPolicyResponse"
+              example:
+                data:
+                  version: 0
+                  enabled: false
+                  auto_create: false
+                  rules: []
+                meta:
+                  request_id: 10000000-0000-4000-8000-000000000001
+                  server_time: 2026-11-13T02:00:00.000Z
+        "400":
+          description: 参数或协议格式错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: 身份失效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: 权限不足或安装已撤销
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: 资源不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: 版本/幂等/有效期冲突
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: 请求体过大
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: 业务规则或查询保留范围不满足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: 限流；遵守 Retry-After
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: 整数秒；存在时优先于本地退避
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 7200
+        "503":
+          description: 依赖不可用；不得确认未持久事件
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          headers:
+            Retry-After:
+              description: 整数秒；存在时优先于本地退避
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 7200
+      x-required-role: admin
+      x-business-rules: 见 docs/api-behavior.md；安装/组织归属来自认证上下文，不接受客户端 employee_id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdentityPolicyUpdate"
+            example:
+              policy:
+                version: 0
+                enabled: false
+                auto_create: false
+                rules: []
+              expected_revision: 0
+              reason: 示例值
   /v1/installations/register:
     post:
       operationId: registerInstallation
@@ -7075,6 +7500,176 @@ components:
       required:
         - credential_id
         - secret
+    WindowsIdentity:
+      type: object
+      additionalProperties: false
+      properties:
+        account_type:
+          type: string
+          enum:
+            - domain
+            - local
+            - unknown
+          description: 客户端报告的账号类型，不是身份认证
+        domain:
+          anyOf:
+            - type: string
+              description: 域名；本地或未知时为空
+              minLength: 1
+              maxLength: 128
+            - type: "null"
+        account_name:
+          anyOf:
+            - type: string
+              description: 域登录名，不能用显示名或目录猜测
+              minLength: 1
+              maxLength: 128
+            - type: "null"
+        source:
+          type: string
+          enum:
+            - windows_logon
+            - unavailable
+          description: 采集来源
+      required:
+        - account_type
+        - domain
+        - account_name
+        - source
+    IdentityRule:
+      type: object
+      additionalProperties: false
+      properties:
+        domain:
+          type: string
+          description: 允许的域，大小写不敏感
+          minLength: 1
+          maxLength: 128
+        format:
+          type: string
+          enum:
+            - digits
+            - alphanumeric
+          description: 工号格式，保留前导零
+        case:
+          type: string
+          enum:
+            - preserve
+            - upper
+            - lower
+          description: 登录名大小写归一化
+      required:
+        - domain
+        - format
+        - case
+    IdentityPolicy:
+      type: object
+      additionalProperties: false
+      properties:
+        version:
+          type: integer
+          description: 版本
+          minimum: 0
+          maximum: 2147483647
+        enabled:
+          type: boolean
+          description: 自动关联是否启用
+        auto_create:
+          type: boolean
+          description: 是否自动创建员工
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/IdentityRule"
+          description: 允许的域及工号校验规则；同一组织内工号全局唯一
+          maxItems: 20
+      required:
+        - version
+        - enabled
+        - auto_create
+        - rules
+    IdentityPolicyUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        policy:
+          $ref: "#/components/schemas/IdentityPolicy"
+        expected_revision:
+          type: integer
+          description: 当前版本
+          minimum: 0
+          maximum: 2147483647
+        reason:
+          type: string
+          description: 修改原因
+          minLength: 1
+          maxLength: 500
+      required:
+        - policy
+        - expected_revision
+        - reason
+    IdentityResult:
+      type: object
+      additionalProperties: false
+      properties:
+        identity:
+          anyOf:
+            - $ref: "#/components/schemas/WindowsIdentity"
+            - type: "null"
+        state:
+          type: string
+          enum:
+            - missing
+            - local
+            - unknown
+            - disabled
+            - domain_not_allowed
+            - invalid_account
+            - employee_missing
+            - employee_archived
+            - identity_conflict
+            - binding_preserved
+            - matched
+          description: 匹配结果
+        employee_id:
+          anyOf:
+            - *a10
+            - type: "null"
+        binding_source:
+          type: string
+          enum:
+            - none
+            - manual
+            - domain
+          description: 当前绑定来源
+      required:
+        - identity
+        - state
+        - employee_id
+        - binding_source
+    IdentityUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        identity:
+          $ref: "#/components/schemas/WindowsIdentity"
+      required:
+        - identity
+    ServerCapabilities:
+      type: object
+      additionalProperties: false
+      properties:
+        capabilities:
+          type: array
+          items:
+            type: string
+            enum:
+              - windows-domain-identity-v1
+            description: 服务端能力
+          description: 能力列表
+          maxItems: 10
+      required:
+        - capabilities
     RegisterInput:
       type: object
       additionalProperties: false
@@ -7121,6 +7716,8 @@ components:
             description: 采集能力
           description: 客户端能力
           maxItems: 20
+        windows_identity:
+          $ref: "#/components/schemas/WindowsIdentity"
       required:
         - registration_id
         - installation_id
@@ -7244,6 +7841,8 @@ components:
           description: 版本
           minimum: 0
           maximum: 2147483647
+        identity_status:
+          $ref: "#/components/schemas/IdentityResult"
       required:
         - id
         - windows_username
@@ -9661,6 +10260,50 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/Ok"
+        meta:
+          $ref: "#/components/schemas/Meta"
+      required:
+        - data
+        - meta
+    serverCapabilitiesResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          $ref: "#/components/schemas/ServerCapabilities"
+        meta:
+          $ref: "#/components/schemas/Meta"
+      required:
+        - data
+        - meta
+    updateIdentityResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          $ref: "#/components/schemas/IdentityResult"
+        meta:
+          $ref: "#/components/schemas/Meta"
+      required:
+        - data
+        - meta
+    getIdentityPolicyResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          $ref: "#/components/schemas/IdentityPolicy"
+        meta:
+          $ref: "#/components/schemas/Meta"
+      required:
+        - data
+        - meta
+    updateIdentityPolicyResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        data:
+          $ref: "#/components/schemas/IdentityPolicy"
         meta:
           $ref: "#/components/schemas/Meta"
       required:

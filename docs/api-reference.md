@@ -136,6 +136,140 @@
 
 错误：400 参数错误；401 凭证失效；403 权限不足；404 不存在；409 冲突；413 超限；422 业务条件不满足；429 限流；503 不可用。统一 ErrorResponse；发生条件及重试动作见 api-behavior.md。
 
+## GET /v1/capabilities
+
+客户端能力发现。operationId: serverCapabilities；最低角色：public。
+
+| 参数 | 位置 | 类型 | 必填 | 说明 |
+|---|---|---|---|---|
+
+
+成功：HTTP 200，serverCapabilitiesResponse。
+
+~~~json
+{
+  "data": {
+    "capabilities": []
+  },
+  "meta": {
+    "request_id": "10000000-0000-4000-8000-000000000001",
+    "server_time": "2026-11-13T02:00:00.000Z"
+  }
+}
+~~~
+
+错误：400 参数错误；401 凭证失效；403 权限不足；404 不存在；409 冲突；413 超限；422 业务条件不满足；429 限流；503 不可用。统一 ErrorResponse；发生条件及重试动作见 api-behavior.md。
+
+## POST /v1/installations/identity
+
+补报当前安装域身份。operationId: updateIdentity；最低角色：device。
+
+| 参数 | 位置 | 类型 | 必填 | 说明 |
+|---|---|---|---|---|
+| Idempotency-Key | header | string | true | 一次操作一个键；重试保持不变，24 小时内相同键不同内容为冲突 |
+
+请求体：IdentityUpdate
+
+~~~json
+{
+  "identity": {
+    "account_type": "domain",
+    "domain": null,
+    "account_name": null,
+    "source": "windows_logon"
+  }
+}
+~~~
+
+成功：HTTP 200，updateIdentityResponse。
+
+~~~json
+{
+  "data": {
+    "identity": null,
+    "state": "missing",
+    "employee_id": null,
+    "binding_source": "none"
+  },
+  "meta": {
+    "request_id": "10000000-0000-4000-8000-000000000001",
+    "server_time": "2026-11-13T02:00:00.000Z"
+  }
+}
+~~~
+
+错误：400 参数错误；401 凭证失效；403 权限不足；404 不存在；409 冲突；413 超限；422 业务条件不满足；429 限流；503 不可用。统一 ErrorResponse；发生条件及重试动作见 api-behavior.md。
+
+## GET /v1/admin/settings/identity
+
+域账号自动匹配规则。operationId: getIdentityPolicy；最低角色：admin。
+
+| 参数 | 位置 | 类型 | 必填 | 说明 |
+|---|---|---|---|---|
+
+
+成功：HTTP 200，getIdentityPolicyResponse。
+
+~~~json
+{
+  "data": {
+    "version": 0,
+    "enabled": false,
+    "auto_create": false,
+    "rules": []
+  },
+  "meta": {
+    "request_id": "10000000-0000-4000-8000-000000000001",
+    "server_time": "2026-11-13T02:00:00.000Z"
+  }
+}
+~~~
+
+错误：400 参数错误；401 凭证失效；403 权限不足；404 不存在；409 冲突；413 超限；422 业务条件不满足；429 限流；503 不可用。统一 ErrorResponse；发生条件及重试动作见 api-behavior.md。
+
+## PATCH /v1/admin/settings/identity
+
+修改域账号自动匹配规则。operationId: updateIdentityPolicy；最低角色：admin。
+
+| 参数 | 位置 | 类型 | 必填 | 说明 |
+|---|---|---|---|---|
+| Idempotency-Key | header | string | true | 一次操作一个键；重试保持不变，24 小时内相同键不同内容为冲突 |
+| X-CSRF-Token | header | string | true | 当前会话 CSRF token |
+
+请求体：IdentityPolicyUpdate
+
+~~~json
+{
+  "policy": {
+    "version": 0,
+    "enabled": false,
+    "auto_create": false,
+    "rules": []
+  },
+  "expected_revision": 0,
+  "reason": "示例值"
+}
+~~~
+
+成功：HTTP 200，updateIdentityPolicyResponse。
+
+~~~json
+{
+  "data": {
+    "version": 0,
+    "enabled": false,
+    "auto_create": false,
+    "rules": []
+  },
+  "meta": {
+    "request_id": "10000000-0000-4000-8000-000000000001",
+    "server_time": "2026-11-13T02:00:00.000Z"
+  }
+}
+~~~
+
+错误：400 参数错误；401 凭证失效；403 权限不足；404 不存在；409 冲突；413 超限；422 业务条件不满足；429 限流；503 不可用。统一 ErrorResponse；发生条件及重试动作见 api-behavior.md。
+
 ## POST /v1/installations/register
 
 安装注册。operationId: registerInstallation；最低角色：enrollment。
@@ -2203,6 +2337,61 @@
 | credential_id | string | true | {"format":"uuid"} | 稳定 UUID，不能使用用户名代替 |
 | secret | string | true | {"minLength":43,"maxLength":43,"pattern":"^[A-Za-z0-9_-]{43}$","writeOnly":true} | 客户端生成的 32 随机字节 base64url；注册前使用 DPAPI 保存；仅认证接口可携带 |
 
+## WindowsIdentity
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| account_type | string | true | {"enum":["domain","local","unknown"]} | 客户端报告的账号类型，不是身份认证 |
+| domain | string / null | true | {} | 域名；本地或未知时为空 |
+| account_name | string / null | true | {} | 域登录名，不能用显示名或目录猜测 |
+| source | string | true | {"enum":["windows_logon","unavailable"]} | 采集来源 |
+
+## IdentityRule
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| domain | string | true | {"minLength":1,"maxLength":128} | 允许的域，大小写不敏感 |
+| format | string | true | {"enum":["digits","alphanumeric"]} | 工号格式，保留前导零 |
+| case | string | true | {"enum":["preserve","upper","lower"]} | 登录名大小写归一化 |
+
+## IdentityPolicy
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| version | integer | true | {"minimum":0,"maximum":2147483647} | 版本 |
+| enabled | boolean | true | {} | 自动关联是否启用 |
+| auto_create | boolean | true | {} | 是否自动创建员工 |
+| rules | array<IdentityRule> | true | {"maxItems":20} | 允许的域及工号校验规则；同一组织内工号全局唯一 |
+
+## IdentityPolicyUpdate
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| policy | IdentityPolicy | true | {} | 见引用对象 |
+| expected_revision | integer | true | {"minimum":0,"maximum":2147483647} | 当前版本 |
+| reason | string | true | {"minLength":1,"maxLength":500} | 修改原因 |
+
+## IdentityResult
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| identity | WindowsIdentity / null | true | {} | 见引用对象 |
+| state | string | true | {"enum":["missing","local","unknown","disabled","domain_not_allowed","invalid_account","employee_missing","employee_archived","identity_conflict","binding_preserved","matched"]} | 匹配结果 |
+| employee_id | string / null | true | {} | 稳定 UUID，不能使用用户名代替 |
+| binding_source | string | true | {"enum":["none","manual","domain"]} | 当前绑定来源 |
+
+## IdentityUpdate
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| identity | WindowsIdentity | true | {} | 见引用对象 |
+
+## ServerCapabilities
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| capabilities | array<string> | true | {"maxItems":10} | 能力列表 |
+
 ## RegisterInput
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
@@ -2216,6 +2405,7 @@
 | sdk_version | string | true | {"minLength":1,"maxLength":64} | Pi SDK 版本 |
 | protocol_version | string | true | {"enum":["1.0"]} | 协议版本 |
 | capabilities | array<string> | true | {"maxItems":20} | 客户端能力 |
+| windows_identity | WindowsIdentity | false | {} | 见引用对象 |
 
 ## RegisterResult
 
@@ -2258,6 +2448,7 @@
 | reported_queue_events | string | true | {"maxLength":19,"pattern":"^(0/[1-9][0-9]*)$"} | 上次上报时的积压，不是实时值；非负 int64 十进制字符串，最大 9223372036854775807 |
 | coverage | Coverage | true | {} | 见引用对象 |
 | revision | integer | true | {"minimum":0,"maximum":2147483647} | 版本 |
+| identity_status | IdentityResult | false | {} | 见引用对象 |
 
 ## Binding
 
@@ -2965,6 +3156,34 @@ DesktopStartedEvent | DesktopOpenedEvent | DesktopActivityEvent | QuerySubmitted
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 |---|---|---|---|---|
 | data | Ok | true | {} | 见引用对象 |
+| meta | Meta | true | {} | 见引用对象 |
+
+## serverCapabilitiesResponse
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| data | ServerCapabilities | true | {} | 见引用对象 |
+| meta | Meta | true | {} | 见引用对象 |
+
+## updateIdentityResponse
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| data | IdentityResult | true | {} | 见引用对象 |
+| meta | Meta | true | {} | 见引用对象 |
+
+## getIdentityPolicyResponse
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| data | IdentityPolicy | true | {} | 见引用对象 |
+| meta | Meta | true | {} | 见引用对象 |
+
+## updateIdentityPolicyResponse
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| data | IdentityPolicy | true | {} | 见引用对象 |
 | meta | Meta | true | {} | 见引用对象 |
 
 ## registerInstallationResponse

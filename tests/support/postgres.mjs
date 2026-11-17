@@ -3,8 +3,12 @@ import path from "node:path";
 import net from "node:net";
 import EmbeddedPostgres from "embedded-postgres";
 import { root, createPool, migrate } from "../../apps/api/src/core.mjs";
-export async function testDatabase() {
+export async function testDatabase({
+  isolatedDatabase = false,
+  beforeMigrate,
+} = {}) {
   let server;
+  let parentPool, databaseName;
   let url = process.env.DATABASE_URL;
   if (!url) {
     const port = await new Promise((resolve) => {
@@ -42,18 +46,38 @@ export async function testDatabase() {
   }
   if (!new URL(url).pathname.endsWith("_test"))
     throw new Error("Only a disposable *_test database is allowed");
+  // Browser fixtures run sequentially against one CI service, but each owns its database.
+  if (isolatedDatabase && !server) {
+    parentPool = createPool(url);
+    databaseName = `piora_ui_${process.pid}_${Date.now()}_test`;
+    await parentPool.query(`CREATE DATABASE "${databaseName}"`);
+    const isolatedUrl = new URL(url);
+    isolatedUrl.pathname = "/" + databaseName;
+    url = isolatedUrl.toString();
+  }
   const pool = createPool(url);
-  const exists = (
-    await pool.query("SELECT to_regclass('public.organizations') AS name")
-  ).rows[0].name;
-  if (exists) throw new Error("Test database must be empty");
-  await migrate(pool);
+  const close = async () => {
+    await pool.end();
+    if (parentPool) {
+      await parentPool.query(`DROP DATABASE "${databaseName}"`);
+      await parentPool.end();
+    }
+    if (server) await server.stop();
+  };
+  try {
+    const exists = (
+      await pool.query("SELECT to_regclass('public.organizations') AS name")
+    ).rows[0].name;
+    if (exists) throw new Error("Test database must be empty");
+    if (beforeMigrate) await beforeMigrate(pool);
+    await migrate(pool);
+  } catch (error) {
+    await close();
+    throw error;
+  }
   return {
     pool,
     url,
-    close: async () => {
-      await pool.end();
-      if (server) await server.stop();
-    },
+    close,
   };
 }

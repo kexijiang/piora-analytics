@@ -78,6 +78,24 @@ sql+=[
  'CREATE INDEX files_daily_day ON daily_file_keys(org_id,day,file_category);',
  'COMMIT;',''
 ].join('\n');
+// Additive schema: retain the deployed 0001 output unchanged.
+const identityTablesStart=tables.length;
+table('installation_identities','客户端域身份及最近匹配结果，不代表企业认证',[org,c('installation_id','uuid','安装','NOT NULL'),c('claim','jsonb','最近报告的身份','NOT NULL'),c('state','varchar(40)','最近匹配结果','NOT NULL'),c('updated_at','timestamptz','最近变化','NOT NULL DEFAULT now()')],['PRIMARY KEY (org_id,installation_id)',tenant('installations','installation_id')]);
+table('employee_domain_accounts','组织内域账号与员工的一对一归属，防止多域误合并',[org,c('domain','varchar(128)','规范化域','NOT NULL'),c('account_name','varchar(128)','规范化域账号','NOT NULL'),c('employee_id','uuid','员工','NOT NULL'),created],['PRIMARY KEY (org_id,domain,account_name)','UNIQUE (org_id,employee_id)',tenant('employees','employee_id')]);
+let identitySql="-- Generated additive identity migration.\nBEGIN;\nALTER TABLE installation_bindings ADD COLUMN source text NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','domain'));\n";
+for(const t of tables.slice(identityTablesStart)) {
+ identitySql+='CREATE TABLE '+t.name+' (\n'+[...t.cols.map(x=>'  '+x.name+' '+x.type+(x.extra?' '+x.extra:'')),...t.constraints.map(x=>'  '+x)].join(',\n')+'\n);\n';
+}
+identitySql+="ALTER TABLE org_settings DROP CONSTRAINT org_settings_name_check;\nALTER TABLE org_settings ADD CONSTRAINT org_settings_name_check CHECK (name IN ('sync','retention','identity'));\nCOMMIT;\n";
+tables.find(t=>t.name==='org_settings').cols.find(c=>c.name==='name').description='sync / retention / identity';
+tables.find(t=>t.name==='org_settings').cols.find(c=>c.name==='name').extra="NOT NULL CHECK (name IN ('sync','retention','identity'))";
+tables.find(t=>t.name==='audit_logs').cols.find(c=>c.name==='actor_id').description='操作者；identity.* 动作为设备安装 UUID，管理动作为后台账号';
+tables.find(t=>t.name==='installation_bindings').cols.push(c('source','text','manual 人工优先；domain 自动关联',"NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','domain'))"));
+// Preserve 0002 for existing deployments; the follow-up migration relaxes only the employee-side uniqueness.
+const domainAccounts=tables.find(t=>t.name==='employee_domain_accounts');
+domainAccounts.description='已报告域账号的归属记录；多个允许域的同一工号归到同一员工';
+domainAccounts.constraints=domainAccounts.constraints.filter(x=>x!=='UNIQUE (org_id,employee_id)');
+const globalEmployeeSql="-- Employee numbers are unique within an organization, across all allowed domains.\nBEGIN;\nALTER TABLE employee_domain_accounts DROP CONSTRAINT employee_domain_accounts_org_id_employee_id_key;\nUPDATE org_settings SET value=jsonb_set(value, '{rules}', COALESCE((SELECT jsonb_agg(rule - 'employee_prefix') FROM jsonb_array_elements(value->'rules') AS rule), '[]'::jsonb)), updated_at=now() WHERE name='identity';\nCOMMIT;\n";
 let md='# 数据库字段字典（自动生成）\n\nPostgreSQL 18；UTC timestamptz，统计日固定 Asia/Shanghai。初始化 SQL：[0001_initial.sql](../database/migrations/0001_initial.sql)。所有计数在 API 中为十进制字符串；NULL 不能转换为零。跨表关系、重算、保留与事务见 [数据库行为](database-design.md)。\n\n';
 for(const t of tables){
  md+='## '+t.name+'\n\n'+t.description+'。\n\n| 字段 | PostgreSQL 类型 | SQL 约束/默认值 | 说明 |\n|---|---|---|---|\n';
@@ -86,6 +104,8 @@ for(const t of tables){
 }
 const write=(p,t)=>{const f=path.join(root,p);fs.mkdirSync(path.dirname(f),{recursive:true});fs.writeFileSync(f,t);};
 write('database/migrations/0001_initial.sql',sql);
+write('database/migrations/0002_domain_identity.sql',identitySql);
+write('database/migrations/0003_global_employee_numbers.sql',globalEmployeeSql);
 write('docs/database-reference.md',md.trimEnd()+'\n');
 write('database/manifest.json',JSON.stringify({postgres_major:18,tables:tables.map(t=>({name:t.name,columns:t.cols.length,description:t.description}))},null,2)+'\n');
 console.log('Generated '+tables.length+' tables.');

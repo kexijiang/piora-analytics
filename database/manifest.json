@@ -28,7 +28,7 @@
     },
     {
       "name": "installation_bindings",
-      "columns": 8,
+      "columns": 9,
       "description": "一台安装实例在任一天最多归属一个员工"
     },
     {
@@ -145,6 +145,16 @@
       "name": "audit_logs",
       "columns": 11,
       "description": "管理操作审计，无密码、原始设备凭证"
+    },
+    {
+      "name": "installation_identities",
+      "columns": 5,
+      "description": "客户端域身份及最近匹配结果，不代表企业认证"
+    },
+    {
+      "name": "employee_domain_accounts",
+      "columns": 5,
+      "description": "已报告域账号的归属记录；多个允许域的同一工号归到同一员工"
     }
   ]
 }
