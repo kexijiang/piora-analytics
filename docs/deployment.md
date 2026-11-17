@@ -146,7 +146,7 @@ docker compose --env-file "$CONFIG_DIR/.env" exec -T database pg_dump -U analyti
 ## 给 Windows Piora 分发配置
 
 1. 管理员生成有限次数、有限期限的 enrollment key。员工在设备接入时自动创建，姓名和部门可后续补充。
-2. 企业配置工具写入每名用户的 %LOCALAPPDATA%\Piora\telemetry\config.json：
+2. 企业配置工具写入每名用户实际 Pi 数据目录下的 `piora/telemetry/config.json`。默认是 `%USERPROFILE%\.pi\agent\piora\telemetry\config.json`；若通过客户端设置或 `PI_CODING_AGENT_DIR` 改过数据目录，应使用实际生效的目录。首次启动会创建 `enabled: false` 的默认配置，不覆盖企业预置内容；只有显式配置 `enabled: true` 和后端地址才开始采集、上传。首次注册还需 enrollment key：
 
 ~~~json
 {
@@ -158,7 +158,11 @@ docker compose --env-file "$CONFIG_DIR/.env" exec -T database pg_dump -U analyti
 
 3. Piora 重启后生成本安装 UUID，注册前先以 Windows DPAPI 加密持久保存随机设备秘密；普通升级保留身份。不要向其他用户复制 outbox.sqlite 或 credentials.dpapi。
 4. 注册成功后管理员可从分发配置移除 enrollment_key；后续凭证自动轮换。后台“采集健康”确认安装与员工归属，同名 Windows 用户不自动合并。
-5. 设置 > 数据 > 组织使用统计显示字段范围、队列、错误码与同步计划。认证失效会暂停上传；恢复接入由管理员检查撤销/密钥状态，客户端不会偷偷重新注册绕过撤销。
+5. “数据与诊断”已移除组织使用统计卡片，本机状态由桌面认证的只读 `/api/analytics/status` 接口提供。认证失效会暂停上传；恢复接入由管理员检查撤销/密钥状态，客户端不会偷偷重新注册绕过撤销。
+
+客户端 `backend_url` 接受 HTTP 或 HTTPS origin（协议、主机和可选端口），不接受用户名密码、查询字符串或业务路径。受信任内网使用 HTTP 时，服务端也需按上文启用 HTTP；其他电脑应填写服务器地址，不能使用客户端自己的 `127.0.0.1`。修改配置后重启 Piora。
+
+配置、`credentials.dpapi` 与 SQLite 队列共用上述 telemetry 目录。旧 `%LOCALAPPDATA%\Piora\telemetry` 数据保留并提示人工迁移，不自动复制。迁移前关闭所有新旧客户端并备份两目录；在同一 Windows 用户下，将旧目录完整迁入尚未启用的新目录，包括 `config.json`、`credentials.dpapi`、SQLite 及 WAL/SHM 文件。不要合并两套已启用的身份与队列，不跨用户或机器复制凭证。
 
 若更换后端或转移员工设备，先导出并核对旧统计，使用安装绑定生效日期管理归属。不要为解决认证问题直接删除员工本地历史或重置所有安装 ID。
 
