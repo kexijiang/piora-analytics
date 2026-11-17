@@ -93,4 +93,4 @@ GitHub CI 状态以相应提交的 Actions 为准，本文件不预报未来结�
 
 ### 统一 Compose 与启动入口验证
 
-check、typecheck、9 项单元测试和 dashboard build 通过。Windows Git Bash 下使用远端 v0.1.2 镜像、带空格的配置路径和独立测试 PostgreSQL 目录，通过 start-up.sh offline 启动隔离项目；数据库和 API 健康、init 正常退出，/health/ready 返回 200。配置目录只读、导出目录可写的 bind 挂载通过检查，旧 scripts/start.sh 转发入口重复启动通过，测试容器已关闭。未改变现有部署，未将上述测试视为真实设备上传验收。Release 工作流已改为测试同一启动脚本，尚未通过新 tag 执行发布。
+check、typecheck、9 项单元测试和 dashboard build 通过。Windows Git Bash 下使用远端 v0.1.2 镜像、带空格的配置路径和独立测试 PostgreSQL 目录，通过 scripts/start.sh offline 启动隔离项目；数据库和 API 健康、init 正常退出，/health/ready 返回 200。配置目录只读、导出目录可写的 bind 挂载通过检查，原有 scripts/start.sh 已直接包含完整启动逻辑，调整后重新启动验证通过，测试容器已关闭。未改变现有部署，未将上述测试视为真实设备上传验收。Release 工作流已改为测试同一启动脚本，尚未通过新 tag 执行发布。

@@ -57,7 +57,7 @@ jobs:
           sudo chmod 750 "$CONFIG_DIR" "$EXPORT_DATA_DIR"
           sudo chmod 640 "$CONFIG_DIR/.env"
           trap 'docker compose --env-file "$CONFIG_DIR/.env" down' EXIT
-          bash start-up.sh offline
+          bash scripts/start.sh offline
           curl --fail http://127.0.0.1:4319/health/ready
           node scripts/smoke-compose.mjs
           docker compose --env-file "$CONFIG_DIR/.env" run --rm init
@@ -89,5 +89,5 @@ jobs:
             piora-analytics-*-linux-amd64.tar
             SHA256SUMS
             compose.yaml
-            start-up.sh
+            scripts/start.sh
             .env.docker.example

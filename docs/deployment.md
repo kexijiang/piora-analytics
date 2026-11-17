@@ -29,7 +29,7 @@ npm run dev
 
 ### 准备目录与配置
 
-安装 Docker Engine 和 Compose 插件。源码构建获取仓库；镜像部署只需 Release 中的 `compose.yaml`、`start-up.sh` 和 `.env.docker.example`，无需安装 Node.js。
+安装 Docker Engine 和 Compose 插件。源码构建获取仓库；镜像部署只需 Release 中的 `compose.yaml`、`scripts/start.sh` 和 `.env.docker.example`，无需安装 Node.js。Release 下载的脚本文件名为 `start.sh`，请放入部署目录的 `scripts/start.sh`（先执行 `mkdir -p scripts`），保持与 Compose 文件的相对位置。
 
 以下以 Linux 大容量盘挂载点 `/data` 为例。先确认磁盘实际挂载，再创建三个互不重叠的目录：
 
@@ -70,14 +70,14 @@ POSTGRES_DATA_DIR、EXPORT_DATA_DIR 必填且必须事先存在，无系统盘�
 
 ```sh
 # 拉取已发布镜像并启动：
-bash start-up.sh image /data/piora/config
+bash scripts/start.sh image /data/piora/config
 # 源码构建：配置 IMAGE_NAME=piora-analytics、APP_VERSION=latest 后执行
-bash start-up.sh local /data/piora/config
+bash scripts/start.sh local /data/piora/config
 # 离线模式：预先 docker load 应用镜像和 postgres:18 镜像
-bash start-up.sh offline /data/piora/config
+bash scripts/start.sh offline /data/piora/config
 ```
 
-省略最后一个参数时使用环境变量 CONFIG_DIR，未设置则用部署目录的 `./config`。脚本将选定目录同时用于挂载和读取配置，避免读取两份不同文件。旧入口 `bash scripts/start.sh` 转发到同一脚本。所有模式都会校验 Compose 并等待服务就绪；offline 不构建、不拉取镜像。
+省略最后一个参数时使用环境变量 CONFIG_DIR，未设置则用部署目录的 `./config`。脚本将选定目录同时用于挂载和读取配置，避免读取两份不同文件。所有模式都会校验 Compose 并等待服务就绪；offline 不构建、不拉取镜像。
 
 日常运维使用同一配置目录和 Compose 项目名：
 
@@ -89,7 +89,7 @@ curl -f http://127.0.0.1:4319/health/ready
 # 停止并保留宿主机数据：
 docker compose --env-file "$CONFIG_DIR/.env" down
 # 恢复：
-bash start-up.sh offline
+bash scripts/start.sh offline
 ```
 
 数据库和 API 应为 healthy，init 应为 Exited (0)，Worker 应为 Up 且日志无持续错误。调整端口或绑定 IP 后同步调整 curl 地址。健康检查和看板可访问不代表真实设备已上报，仍需进行设备上传和聚合验收。
@@ -115,13 +115,13 @@ chmod 700 backups
 docker compose --env-file "$CONFIG_DIR/.env" exec -T database pg_dump -U analytics -d piora_analytics -Fc > "backups/piora-$(date +%Y%m%d-%H%M%S).dump"
 ```
 
-确认退出码为 0，将备份复制到独立存储，并安全备份配置、保持 PEPPER 不变。定期在隔离数据库演练恢复。应用升级时修改 APP_VERSION，再运行 `bash start-up.sh image`；当前仅支持空库初始化和相同表结构的重启，不支持旧库自动升级。正式部署后的结构升级需另行设计。
+确认退出码为 0，将备份复制到独立存储，并安全备份配置、保持 PEPPER 不变。定期在隔离数据库演练恢复。应用升级时修改 APP_VERSION，再运行 `bash scripts/start.sh image`；当前仅支持空库初始化和相同表结构的重启，不支持旧库自动升级。正式部署后的结构升级需另行设计。
 
 唯一 Compose 使用宿主机绑定目录，不再使用 pgdata/exports 命名卷。`down`（包括 `down -v`）不会删除绑定目录中的文件。旧版命名卷数据不会自动迁入新目录：切换前需要停写、备份并恢复，不能直接指向空目录后认为旧数据仍在。不要同时运行两个项目访问同一 PostgreSQL 目录。
 
 ### 版本镜像与离线发布
 
-推送 `v*` tag 触发 Release Image：质量检查、linux/amd64 镜像构建、使用 `start-up.sh offline` 的隔离 Compose 检查通过后，发布 `ghcr.io/<仓库所有者>/piora-analytics:<tag>`。非预发布版本更新 latest。Release 附件包含应用镜像 tar、SHA256SUMS、compose.yaml、start-up.sh、.env.docker.example。工作流存在不代表该版本已发布。
+推送 `v*` tag 触发 Release Image：质量检查、linux/amd64 镜像构建、使用 `scripts/start.sh offline` 的隔离 Compose 检查通过后，发布 `ghcr.io/<仓库所有者>/piora-analytics:<tag>`。非预发布版本更新 latest。Release 附件包含应用镜像 tar、SHA256SUMS、compose.yaml、scripts/start.sh、.env.docker.example。工作流存在不代表该版本已发布。
 
 离线部署先核验 SHA256SUMS，加载应用 tar；另外准备并加载 postgres:18 镜像，应用 tar 不含 PostgreSQL。准备目录及配置后运行 offline 模式。私有 GHCR 包需先 docker login ghcr.io。当前 v0.1.2 应用镜像支持此配置读取方式；新的启动文件随下一次 Release 提供，也可从仓库获取。
 
