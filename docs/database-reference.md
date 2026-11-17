@@ -117,6 +117,7 @@ Windows 安装实例，用户名仅供匹配。
 | reason | varchar(500) | NOT NULL | 绑定/纠错原因 |
 | revision | integer | NOT NULL DEFAULT 1 CHECK (revision > 0) | 乐观锁版本 |
 | created_at | timestamptz | NOT NULL DEFAULT now() | 创建时间 |
+| source | text | NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','domain')) | manual 人工优先；domain 自动关联 |
 
 表约束：
 
@@ -239,7 +240,7 @@ Windows 安装实例，用户名仅供匹配。
 | 字段 | PostgreSQL 类型 | SQL 约束/默认值 | 说明 |
 |---|---|---|---|
 | org_id | uuid | NOT NULL REFERENCES organizations(id) | 组织隔离键 |
-| name | text | NOT NULL CHECK (name IN ('sync','retention')) | sync / retention |
+| name | text | NOT NULL CHECK (name IN ('sync','retention','identity')) | sync / retention / identity |
 | value | jsonb | NOT NULL | 按对应 OpenAPI 模型验证 |
 | revision | integer | NOT NULL DEFAULT 1 CHECK (revision > 0) | 乐观锁版本 |
 | updated_at | timestamptz | NOT NULL DEFAULT now() | 修改时间 |
@@ -653,7 +654,7 @@ Windows 安装实例，用户名仅供匹配。
 |---|---|---|---|
 | id | uuid | PRIMARY KEY | 业务 UUID |
 | org_id | uuid | NOT NULL REFERENCES organizations(id) | 组织隔离键 |
-| actor_id | uuid | NOT NULL | 操作者；系统任务使用固定系统主体 UUID |
+| actor_id | uuid | NOT NULL | 操作者；identity.* 动作为设备安装 UUID，管理动作为后台账号 |
 | action | varchar(80) | NOT NULL | 动作 |
 | target_type | varchar(80) | NOT NULL | 对象类型 |
 | target_id | uuid | NOT NULL | 对象 |
@@ -664,3 +665,40 @@ Windows 安装实例，用户名仅供匹配。
 | occurred_at | timestamptz | NOT NULL DEFAULT now() | 发生时间 |
 
 表约束：
+
+
+
+## installation_identities
+
+客户端域身份及最近匹配结果，不代表企业认证。
+
+| 字段 | PostgreSQL 类型 | SQL 约束/默认值 | 说明 |
+|---|---|---|---|
+| org_id | uuid | NOT NULL REFERENCES organizations(id) | 组织隔离键 |
+| installation_id | uuid | NOT NULL | 安装 |
+| claim | jsonb | NOT NULL | 最近报告的身份 |
+| state | varchar(40) | NOT NULL | 最近匹配结果 |
+| updated_at | timestamptz | NOT NULL DEFAULT now() | 最近变化 |
+
+表约束：
+
+- PRIMARY KEY (org_id,installation_id)
+- FOREIGN KEY (org_id, installation_id) REFERENCES installations(org_id, id)
+
+## employee_domain_accounts
+
+组织内域账号与员工的一对一归属，防止多域误合并。
+
+| 字段 | PostgreSQL 类型 | SQL 约束/默认值 | 说明 |
+|---|---|---|---|
+| org_id | uuid | NOT NULL REFERENCES organizations(id) | 组织隔离键 |
+| domain | varchar(128) | NOT NULL | 规范化域 |
+| account_name | varchar(128) | NOT NULL | 规范化域账号 |
+| employee_id | uuid | NOT NULL | 员工 |
+| created_at | timestamptz | NOT NULL DEFAULT now() | 创建时间 |
+
+表约束：
+
+- PRIMARY KEY (org_id,domain,account_name)
+- UNIQUE (org_id,employee_id)
+- FOREIGN KEY (org_id, employee_id) REFERENCES employees(org_id, id)

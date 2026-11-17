@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "operations": 51,
-  "schemas": 139,
+  "operations": 55,
+  "schemas": 150,
   "event_types": [
     "desktop.started",
     "desktop.opened",

@@ -910,6 +910,48 @@ tbody tr:hover {
 .settings-form button {
   align-self: flex-start;
 }
+.identity-fields {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.identity-settings .checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.identity-settings input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.identity-rule {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  min-width: 0;
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.identity-rule legend {
+  font-size: 12px;
+  padding: 0 6px;
+}
+.identity-rule button {
+  align-self: end;
+}
+.identity-settings [role="status"]:not(:empty) {
+  margin: 0 22px;
+  font-size: 12px;
+}
+.identity-notice {
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  line-height: 1.7;
+}
 .input-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;

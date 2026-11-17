@@ -1,3 +1,4 @@
+import { matchIdentity } from "./identity.mjs";
 import {
   ApiError,
   one,
@@ -105,6 +106,7 @@ export async function register(c, body, req, config) {
       [key.id],
     );
     cred = { expires_at: expiry };
+    if (body.windows_identity) await matchIdentity(c, body.windows_identity, {org: config.org, installation: body.installation_id, requestId: req.id});
   }
   const bound = (
     await c.query(

@@ -1,3 +1,4 @@
+import { matchIdentity } from "./identity.mjs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import Fastify, { LogController } from "fastify";
@@ -173,6 +174,7 @@ export async function createServer(pool, config) {
             .at(-1);
           if (requestSchema && id !== "ingestBatch")
             validate(requestSchema, req.body);
+          if (id === "serverCapabilities") return {data: {capabilities: ["windows-domain-identity-v1"]}, meta: {request_id:req.id,server_time:iso()}};
           if (id === "liveness")
             return {
               data: { status: "ok" },
@@ -255,6 +257,8 @@ export async function createServer(pool, config) {
               );
             else if (id === "registerInstallation")
               body = await register(c, req.body, req, config);
+            else if (id === "updateIdentity")
+              body = await matchIdentity(c, req.body.identity, ctx);
             else if (id === "rotateCredential")
               body = await rotate(c, req.body, ctx, req, config);
             else if (id === "ingestBatch") {

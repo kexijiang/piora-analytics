@@ -767,6 +767,255 @@
         "secret"
       ]
     },
+    "WindowsIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "account_type": {
+          "type": "string",
+          "enum": [
+            "domain",
+            "local",
+            "unknown"
+          ],
+          "description": "客户端报告的账号类型，不是身份认证"
+        },
+        "domain": {
+          "anyOf": [
+            {
+              "type": "string",
+              "description": "域名；本地或未知时为空",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "account_name": {
+          "anyOf": [
+            {
+              "type": "string",
+              "description": "域登录名，不能用显示名或目录猜测",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "windows_logon",
+            "unavailable"
+          ],
+          "description": "采集来源"
+        }
+      },
+      "required": [
+        "account_type",
+        "domain",
+        "account_name",
+        "source"
+      ]
+    },
+    "IdentityRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "type": "string",
+          "description": "允许的域，大小写不敏感",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "employee_prefix": {
+          "type": "string",
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9_-]*$",
+          "description": "工号前缀；多域必须使用不同前缀"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "digits",
+            "alphanumeric"
+          ],
+          "description": "工号格式，保留前导零"
+        },
+        "case": {
+          "type": "string",
+          "enum": [
+            "preserve",
+            "upper",
+            "lower"
+          ],
+          "description": "登录名大小写归一化"
+        }
+      },
+      "required": [
+        "domain",
+        "employee_prefix",
+        "format",
+        "case"
+      ]
+    },
+    "IdentityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "type": "integer",
+          "description": "版本",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "自动关联是否启用"
+        },
+        "auto_create": {
+          "type": "boolean",
+          "description": "是否自动创建员工"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/IdentityRule"
+          },
+          "description": "域映射规则；域与前缀各自唯一",
+          "maxItems": 20
+        }
+      },
+      "required": [
+        "version",
+        "enabled",
+        "auto_create",
+        "rules"
+      ]
+    },
+    "IdentityPolicyUpdate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "$ref": "#/$defs/IdentityPolicy"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "description": "当前版本",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "reason": {
+          "type": "string",
+          "description": "修改原因",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "policy",
+        "expected_revision",
+        "reason"
+      ]
+    },
+    "IdentityResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WindowsIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "missing",
+            "local",
+            "unknown",
+            "disabled",
+            "domain_not_allowed",
+            "invalid_account",
+            "employee_missing",
+            "employee_archived",
+            "identity_conflict",
+            "binding_preserved",
+            "matched"
+          ],
+          "description": "匹配结果"
+        },
+        "employee_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid",
+              "description": "稳定 UUID，不能使用用户名代替"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "binding_source": {
+          "type": "string",
+          "enum": [
+            "none",
+            "manual",
+            "domain"
+          ],
+          "description": "当前绑定来源"
+        }
+      },
+      "required": [
+        "identity",
+        "state",
+        "employee_id",
+        "binding_source"
+      ]
+    },
+    "IdentityUpdate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "$ref": "#/$defs/WindowsIdentity"
+        }
+      },
+      "required": [
+        "identity"
+      ]
+    },
+    "ServerCapabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "windows-domain-identity-v1"
+            ],
+            "description": "服务端能力"
+          },
+          "description": "能力列表",
+          "maxItems": 10
+        }
+      },
+      "required": [
+        "capabilities"
+      ]
+    },
     "RegisterInput": {
       "type": "object",
       "additionalProperties": false,
@@ -830,6 +1079,9 @@
           },
           "description": "客户端能力",
           "maxItems": 20
+        },
+        "windows_identity": {
+          "$ref": "#/$defs/WindowsIdentity"
         }
       },
       "required": [
@@ -1019,6 +1271,9 @@
           "description": "版本",
           "minimum": 0,
           "maximum": 2147483647
+        },
+        "identity_status": {
+          "$ref": "#/$defs/IdentityResult"
         }
       },
       "required": [
@@ -4620,6 +4875,70 @@
       "properties": {
         "data": {
           "$ref": "#/$defs/Ok"
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        }
+      },
+      "required": [
+        "data",
+        "meta"
+      ]
+    },
+    "serverCapabilitiesResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "$ref": "#/$defs/ServerCapabilities"
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        }
+      },
+      "required": [
+        "data",
+        "meta"
+      ]
+    },
+    "updateIdentityResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "$ref": "#/$defs/IdentityResult"
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        }
+      },
+      "required": [
+        "data",
+        "meta"
+      ]
+    },
+    "getIdentityPolicyResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "$ref": "#/$defs/IdentityPolicy"
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        }
+      },
+      "required": [
+        "data",
+        "meta"
+      ]
+    },
+    "updateIdentityPolicyResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "$ref": "#/$defs/IdentityPolicy"
         },
         "meta": {
           "$ref": "#/$defs/Meta"

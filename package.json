@@ -27,7 +27,8 @@
     "setup": "node --env-file-if-exists=.env scripts/setup.mjs",
     "dev:api": "node --env-file-if-exists=.env apps/api/src/main.mjs",
     "dev:worker": "node --env-file-if-exists=.env apps/worker/src/main.mjs",
-    "test:api": "node tests/api.integration.mjs"
+    "test:api": "node tests/api.integration.mjs",
+    "test:identity": "node tests/identity.integration.mjs"
   },
   "devDependencies": {
     "@apidevtools/swagger-parser": "13.1.0",
