@@ -43,11 +43,24 @@ jobs:
           ALLOW_HTTP: 'true'
           INIT_ADMIN_PASSWORD: disposable-admin-password
         run: |
-          docker compose -p release-test up -d --no-build --wait --wait-timeout 180
+          export COMPOSE_PROJECT_NAME=release-test
+          export CONFIG_DIR="$RUNNER_TEMP/piora/config"
+          export POSTGRES_DATA_DIR="$RUNNER_TEMP/piora/postgres"
+          export EXPORT_DATA_DIR="$RUNNER_TEMP/piora/exports"
+          mkdir -p "$CONFIG_DIR" "$POSTGRES_DATA_DIR" "$EXPORT_DATA_DIR"
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          const keys = ['IMAGE_NAME', 'APP_VERSION', 'POSTGRES_PASSWORD', 'ANALYTICS_PEPPER', 'ANALYTICS_ORIGIN', 'ALLOW_HTTP', 'INIT_ADMIN_PASSWORD', 'CONFIG_DIR', 'POSTGRES_DATA_DIR', 'EXPORT_DATA_DIR'];
+          writeFileSync(`${process.env.CONFIG_DIR}/.env`, keys.map(key => `${key}=${process.env[key]}`).join('\n') + '\n', { mode: 0o600 });
+          NODE
+          sudo chown -R "1000:$(id -g)" "$CONFIG_DIR" "$EXPORT_DATA_DIR"
+          sudo chmod 750 "$CONFIG_DIR" "$EXPORT_DATA_DIR"
+          sudo chmod 640 "$CONFIG_DIR/.env"
+          trap 'docker compose --env-file "$CONFIG_DIR/.env" down' EXIT
+          bash start-up.sh offline
           curl --fail http://127.0.0.1:4319/health/ready
           node scripts/smoke-compose.mjs
-          docker compose -p release-test run --rm init
-          docker compose -p release-test down -v
+          docker compose --env-file "$CONFIG_DIR/.env" run --rm init
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -76,5 +89,5 @@ jobs:
             piora-analytics-*-linux-amd64.tar
             SHA256SUMS
             compose.yaml
-            compose.config.yaml
+            start-up.sh
             .env.docker.example

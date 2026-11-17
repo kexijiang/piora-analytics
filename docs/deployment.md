@@ -25,187 +25,107 @@ npm run dev
 
 ## 容器部署
 
-公司受信任内网可显式启用 HTTP：复制 `.env.docker.example` 为 `.env`，填写 URL 安全的随机 POSTGRES_PASSWORD、至少 32 字符随机 ANALYTICS_PEPPER、INIT_ADMIN_PASSWORD（12–256 位），并将 ANALYTICS_ORIGIN 改为浏览器实际访问的地址，例如 `http://analytics.internal:4319`，不要带末尾斜线。HTTP 下密码和统计请求明文传输，适用于本次内网部署范围。公网使用 HTTPS，并关闭 ALLOW_HTTP。
+统一使用 `compose.yaml`，不再提供 compose.config.yaml。唯一的部署配置文件是宿主机 `<配置目录>/.env`；默认 `config/.env`。API、Worker、init 只读挂载这个目录到 `/config`，Node 启动时读取 `/config/.env`；Compose 同时通过 `--env-file` 读取同一文件。
 
-~~~sh
-cp .env.docker.example .env
-# 编辑 .env 后，本地源码构建并启动：
-bash scripts/start.sh local
-# 等价：docker compose build && docker compose up -d --no-build --wait
-~~~
+### 准备目录与配置
 
-Compose 自动等待数据库健康，init 服务从 database/schema.sql 初始化空库并创建组织/管理员，随后启动 API（含看板）和 Worker。首次登录强制修改密码；初始化后可从 .env 移除 INIT_ADMIN_PASSWORD。重复启动保留已有账号和数据，不执行版本迁移。结构不完整的库会拒绝初始化，不会自动删库。
+安装 Docker Engine 和 Compose 插件。源码构建获取仓库；镜像部署只需 Release 中的 `compose.yaml`、`start-up.sh` 和 `.env.docker.example`，无需安装 Node.js。
 
-API 默认映射 127.0.0.1；内网示例使用 BIND_ADDRESS=0.0.0.0，APP_PORT=4319。数据库不对宿主机暴露端口。健康检查为 `/health/ready`。Worker 没有独立健康检查，运行状态不代表已完成聚合。
-
-### 运维操作步骤（Linux / Bash）
-
-以下命令在同一个部署目录执行。首次准备 Docker Engine 和 Compose 插件，并确认能访问 Docker Hub 与 npm；防火墙只向需要访问的公司内网开放应用端口。源码部署需要 Git，镜像部署不需要 Node.js 或 npm 安装在宿主机。
-
-~~~sh
-docker --version
-docker compose version
-git clone -b codex/intranet-docker https://github.com/kexijiang/piora-analytics.git
-cd piora-analytics
-cp .env.docker.example .env
-chmod 600 .env
-~~~
-
-上述分支包含本次部署改造；合并后可使用包含该改造的主分支或已确认版本。编辑 `.env`，配置示例如下（占位内容必须替换）：
-
-~~~dotenv
-POSTGRES_PASSWORD=替换为随机十六进制密码
-ANALYTICS_PEPPER=替换为至少32字符随机字符串
-ANALYTICS_ORIGIN=http://analytics.internal:4319
-ALLOW_HTTP=true
-BIND_ADDRESS=0.0.0.0
-APP_PORT=4319
-IMAGE_NAME=piora-analytics
-APP_VERSION=latest
-INIT_ORG_NAME=公司名称
-INIT_ADMIN_USERNAME=admin
-INIT_ADMIN_PASSWORD=替换为至少12位初始密码
-~~~
-
-可分别运行 `openssl rand -hex 32` 生成数据库密码和 PEPPER。浏览器使用 IP 访问时，ANALYTICS_ORIGIN 也填写该 IP；使用域名时填写域名。端口变化时同步修改 APP_PORT 和 origin。不要提交或分享实际 `.env`。
-
-启动与验收：
-
-~~~sh
-bash scripts/start.sh local
-docker compose ps -a
-docker compose logs --tail=100 init api worker
-curl -f http://127.0.0.1:4319/health/ready
-~~~
-
-若更改 APP_PORT，调整 curl 端口；若仅绑定指定网卡 IP，使用该地址检查。
-
-| 服务 | 预期状态 |
-|---|---|
-| database | healthy |
-| init | Exited (0)，一次性任务正常完成 |
-| api | healthy |
-| worker | Up，日志无持续错误；仍需检查实际聚合结果 |
-
-访问配置的 ANALYTICS_ORIGIN，使用初始账号登录并修改密码。刷新页面确认会话保留。初始化完成后删除 `.env` 中的 INIT_ADMIN_PASSWORD，保留数据库密码和 PEPPER。首页或健康接口正常不代表真实设备已上报，采集验收需另外执行。
-
-日常操作：
-
-~~~sh
-docker compose ps -a
-docker compose logs -f --tail=100 api worker
-docker compose restart api worker
-# 停机，保留数据：
-docker compose down
-# 恢复服务：
-docker compose up -d --no-build --wait
-~~~
-
-不要执行 `docker compose down -v`，它会删除数据卷。不要随意修改部署目录或 Compose 项目名，否则可能启动另一套空数据库。
-
-升级前备份（下面的二进制重定向命令用于 Linux/Bash）：
-
-~~~sh
-mkdir -p backups
-chmod 700 backups
-backup="backups/piora-$(date +%Y%m%d-%H%M%S).dump"
-docker compose exec -T database pg_dump -U analytics -d piora_analytics -Fc > "$backup"
-# 必须确认上一条命令退出码为 0，再将备份复制到独立存储。
-~~~
-
-同时安全备份 `.env`，保持 PEPPER 不变。备份需要定期在隔离数据库恢复演练；不能仅凭文件存在认定可恢复。此仓库没有自动备份任务。
-
-应用更新：先获取并切换到已确认的新版本，在维护窗口执行以下步骤。当前只支持空库初始化和相同表结构下的应用重启，没有旧库自动升级逻辑。开发阶段若表结构改变，需要先备份并重建可丢弃的测试库；正式部署后的升级另行设计。
-
-~~~sh
-docker compose build
-docker compose stop api worker
-docker compose run --rm init
-# 仅在初始化/已有表检查成功后继续：
-docker compose up -d --no-build --wait
-~~~
-
-每步都检查退出码；init 失败时检查日志，不继续启动新应用。镜像更新对应地先修改 APP_VERSION 并执行 `docker compose pull`，再执行停应用、init 和 up。更改表结构后的应用回退需确认兼容性。
-
-### 将宿主机配置目录挂载到容器
-
-使用独立的 `compose.config.yaml`（无需与 compose.yaml 叠加）。API、Worker 和 init 都将宿主机 `CONFIG_DIR` 只读挂载到 `/config`，Node 启动时读取 `/config/.env`。数据库密码、镜像、端口等 Compose 参数仍由同一份宿主机 `.env` 通过 `--env-file` 提供，避免维护两份配置。容器不会创建或覆盖宿主机配置。
-
-建议目录结构：
-
-```text
-部署目录/
-  compose.config.yaml
-  config/
-    .env
-  # 数据目录可位于独立的大容量磁盘
-```
-
-Linux 示例（先编辑配置，替换所有空密钥及服务器地址）：
-
-```sh
-mkdir -p config
-cp .env.docker.example config/.env
-# 编辑 config/.env，设置真实密钥、ANALYTICS_ORIGIN、ALLOW_HTTP 等
-# 必须设置 POSTGRES_DATA_DIR 和 EXPORT_DATA_DIR，并先创建对应目录
-# 使用发布镜像：IMAGE_NAME=ghcr.io/kexijiang/piora-analytics
-# APP_VERSION=已发布版本，例如 v0.1.2
-docker compose -f compose.config.yaml --env-file ./config/.env up -d --no-build --wait
-docker compose -f compose.config.yaml --env-file ./config/.env logs --tail=100 init api worker
-```
-
-默认 `CONFIG_DIR=./config` 相对于 Compose 文件目录解析。需要自定义路径时，在该配置文件中设置绝对路径，例如 `CONFIG_DIR=/srv/piora/config`，启动时也指定 `--env-file /srv/piora/config/.env`。Windows Docker Desktop 可使用 `CONFIG_DIR=D:/piora-config`，对应 `--env-file D:/piora-config/.env`。宿主机目录必须事先存在，并允许镜像中的 node 用户（UID 1000）读取目录与文件；Linux 可将目录归属 UID 1000、目录权限设为 700、文件设为 600。不要将含密钥的目录共享给无关用户或提交到仓库。
-
-数据库和导出目录同样在配置文件中指定，以下以大容量盘挂载点 `/data` 为例：
-
-```dotenv
-CONFIG_DIR=/data/piora/config
-POSTGRES_DATA_DIR=/data/piora/postgres
-EXPORT_DATA_DIR=/data/piora/exports
-```
-
-`POSTGRES_DATA_DIR` 挂载到 PostgreSQL 18 的 `/var/lib/postgresql`，`EXPORT_DATA_DIR` 由 API 和 Worker 共享挂载到 `/exports`，两者可读写；配置目录仍只读。三个目录应相互独立，不要重叠。数据路径为必填项，没有系统盘路径回退，目录不存在时启动失败而不会自动创建。
-
-首次部署先检查磁盘，再创建目录（不是只创建一个叫 `/data` 的文件夹）：
+以下以 Linux 大容量盘挂载点 `/data` 为例。先确认磁盘实际挂载，再创建三个互不重叠的目录：
 
 ```sh
 findmnt -T /data
 df -hT /data
 sudo mkdir -p /data/piora/config /data/piora/postgres /data/piora/exports
-sudo chown 1000:1000 /data/piora/config /data/piora/exports
+sudo cp .env.docker.example /data/piora/config/.env
+# 编辑 /data/piora/config/.env 后设置权限：
+sudo chown -R 1000:1000 /data/piora/config /data/piora/exports
 sudo chmod 700 /data/piora/config /data/piora/exports
-# config/.env 也需要 UID 1000 可读；PostgreSQL 目录由官方镜像初始化权限。
+sudo chmod 600 /data/piora/config/.env
 ```
 
-Windows Docker Desktop 可用 `D:/piora-data/postgres`、`D:/piora-data/exports`，目录同样需要预先创建。Linux 的磁盘挂载应配置为开机自动挂载，启动前确认磁盘就绪；目录存在本身不能证明大容量盘已挂载。不要修改正在使用中的数据路径。绑定目录中的文件不会被 `docker compose down -v` 删除；默认命名卷模式仍会受该命令影响。
+启动命令需要由可读取该文件的账户执行。容器应用用户 UID 1000 必须可读配置、可写 exports；PostgreSQL 数据目录权限由官方镜像初始化。宿主机运维账户也需相应权限。
 
-配置在进程启动时读取，没有热加载。修改后使用相同参数重建应用容器：
+配置中填写：
+
+```dotenv
+CONFIG_DIR=/data/piora/config
+POSTGRES_DATA_DIR=/data/piora/postgres
+EXPORT_DATA_DIR=/data/piora/exports
+IMAGE_NAME=ghcr.io/kexijiang/piora-analytics
+APP_VERSION=v0.1.2
+ANALYTICS_ORIGIN=http://analytics.internal:4319
+ALLOW_HTTP=true
+BIND_ADDRESS=0.0.0.0
+APP_PORT=4319
+INIT_ORG_NAME=公司名称
+INIT_ADMIN_USERNAME=admin
+```
+
+另外必须填写 URL 安全的随机 `POSTGRES_PASSWORD`、至少 32 字符随机 `ANALYTICS_PEPPER`、12–256 位 `INIT_ADMIN_PASSWORD`。可分别用 `openssl rand -hex 32` 生成秘密，不要提交或分享实际配置。浏览器访问地址必须与 ANALYTICS_ORIGIN 一致，不带末尾斜线。HTTP 适用于受信任内网；公网应使用 HTTPS 和 ALLOW_HTTP=false。
+
+POSTGRES_DATA_DIR、EXPORT_DATA_DIR 必填且必须事先存在，无系统盘回退、不自动建目录。分别挂载到 PostgreSQL 18 的 `/var/lib/postgresql` 和 API/Worker 共享的 `/exports`。配置目录只读，数据目录可读写。Linux 应配置磁盘开机挂载；目录存在不能证明数据盘已挂载。Windows Docker Desktop 可填写 `D:/piora/config`、`D:/piora/postgres` 和 `D:/piora/exports`，用 Git Bash 运行启动脚本。
+
+### 启动与验收
 
 ```sh
-docker compose -f compose.config.yaml --env-file ./config/.env up -d --no-build --force-recreate init api worker
+# 拉取已发布镜像并启动：
+bash start-up.sh image /data/piora/config
+# 源码构建：配置 IMAGE_NAME=piora-analytics、APP_VERSION=latest 后执行
+bash start-up.sh local /data/piora/config
+# 离线模式：预先 docker load 应用镜像和 postgres:18 镜像
+bash start-up.sh offline /data/piora/config
 ```
 
-`DATABASE_URL` 由 Compose 根据数据库密码和内部服务地址生成；`PORT`、`HOST`、`EXPORT_DIR` 等容器内部参数由 Compose 固定。其余应用配置从挂载文件读取。不要直接修改已有数据库卷的 POSTGRES_PASSWORD 或 ANALYTICS_PEPPER；它们不是普通热更新配置。
+省略最后一个参数时使用环境变量 CONFIG_DIR，未设置则用部署目录的 `./config`。脚本将选定目录同时用于挂载和读取配置，避免读取两份不同文件。旧入口 `bash scripts/start.sh` 转发到同一脚本。所有模式都会校验 Compose 并等待服务就绪；offline 不构建、不拉取镜像。
 
-挂载模式直接使用指定的宿主机目录，不使用 pgdata/exports 命名卷。已有命名卷的数据不会自动迁移，切换前需停写、备份并恢复到新目录；即使项目名相同，也不会自动复用命名卷。默认 compose.yaml 的环境变量注入方式仍可用。当前 v0.1.2 镜像已支持 Node 的文件读取参数，可配合这份 Compose 文件使用；新增文件将在下一次 Release 中作为附件提供。
+日常运维使用同一配置目录和 Compose 项目名：
 
-### 版本镜像与离线部署
+```sh
+export CONFIG_DIR=/data/piora/config
+docker compose --env-file "$CONFIG_DIR/.env" ps -a
+docker compose --env-file "$CONFIG_DIR/.env" logs --tail=100 init api worker
+curl -f http://127.0.0.1:4319/health/ready
+# 停止并保留宿主机数据：
+docker compose --env-file "$CONFIG_DIR/.env" down
+# 恢复：
+bash start-up.sh offline
+```
 
-`bash scripts/build.sh` 构建当前工作区；`bash scripts/build.sh v1.2.0` 从已有 Git tag 构建，包含该 tag 的代码。IMAGE_NAME 可覆盖镜像名。指定版本镜像时，在 .env 中填写相同 IMAGE_NAME 与 APP_VERSION。
+数据库和 API 应为 healthy，init 应为 Exited (0)，Worker 应为 Up 且日志无持续错误。调整端口或绑定 IP 后同步调整 curl 地址。健康检查和看板可访问不代表真实设备已上报，仍需进行设备上传和聚合验收。
 
-推送 `v*` tag 会触发 Release Image：质量检查、linux/amd64 镜像构建、隔离 Compose 启动检查通过后，发布 `ghcr.io/<仓库所有者>/piora-analytics:<tag>`。非预发布版本还更新 latest；GitHub Release 提供镜像 tar、SHA256SUMS、Compose 和配置示例。此流程参考 ai-code-tracker-server，但发布的是本仓库镜像。工作流文件存在不代表镜像已发布。
+init 从 database/schema.sql 初始化空库；重复启动保留已有账号和数据，不执行升级迁移，结构不完整时拒绝初始化。首次登录必须修改临时密码；完成后可从配置文件移除 INIT_ADMIN_PASSWORD。数据库不对宿主机开放端口。
 
-~~~sh
-# .env 设置 IMAGE_NAME=ghcr.io/<仓库所有者>/piora-analytics、APP_VERSION=v1.2.0
-bash scripts/start.sh image
-# 或：docker compose pull && docker compose up -d --no-build --wait
-~~~
+### 配置修改、备份与升级
 
-私有 GHCR 包需要先 docker login ghcr.io。离线服务器下载 Release tar 后 `docker load -i <镜像文件.tar>`，还必须从联网机器预先导出并加载 `postgres:18` 镜像（应用 tar 不包含 PostgreSQL）。复制 compose.yaml 和配置文件后，运行 `docker compose up -d --no-build --pull never --wait`；有源码目录也可用 `bash scripts/start.sh offline`。镜像仅适用于 linux/amd64。
+配置在进程启动时读取，没有热加载。修改应用配置后重建：
 
-默认 compose.yaml 使用 pgdata、exports 命名卷，更新时保持同一 Compose 项目名/目录；compose.config.yaml 使用指定宿主机目录。`docker compose down` 保留数据，`down -v` 会删除数据。升级前备份数据库；PEPPER 必须保持不变。生产备份、告警和权限拆分仍由运维配置，默认单 API、单 Worker。
+```sh
+export CONFIG_DIR=/data/piora/config
+docker compose --env-file "$CONFIG_DIR/.env" up -d --no-build --force-recreate --wait init api worker
+```
 
-HTTPS 部署可参考 [Caddy 配置](../deploy/Caddyfile.example)，并将 ANALYTICS_ORIGIN 设置为 HTTPS 地址、ALLOW_HTTP=false。HTTP 与 HTTPS 使用不同会话 Cookie，切换后重新登录。
+DATABASE_URL 由 Compose 根据数据库密码和内部地址生成，PORT、HOST、EXPORT_DIR 等容器内部参数由 Compose 固定。不要直接修改已初始化数据库的密码或 ANALYTICS_PEPPER。
+
+升级前备份（Linux/Bash）：
+
+```sh
+mkdir -p backups
+chmod 700 backups
+docker compose --env-file "$CONFIG_DIR/.env" exec -T database pg_dump -U analytics -d piora_analytics -Fc > "backups/piora-$(date +%Y%m%d-%H%M%S).dump"
+```
+
+确认退出码为 0，将备份复制到独立存储，并安全备份配置、保持 PEPPER 不变。定期在隔离数据库演练恢复。应用升级时修改 APP_VERSION，再运行 `bash start-up.sh image`；当前仅支持空库初始化和相同表结构的重启，不支持旧库自动升级。正式部署后的结构升级需另行设计。
+
+唯一 Compose 使用宿主机绑定目录，不再使用 pgdata/exports 命名卷。`down`（包括 `down -v`）不会删除绑定目录中的文件。旧版命名卷数据不会自动迁入新目录：切换前需要停写、备份并恢复，不能直接指向空目录后认为旧数据仍在。不要同时运行两个项目访问同一 PostgreSQL 目录。
+
+### 版本镜像与离线发布
+
+推送 `v*` tag 触发 Release Image：质量检查、linux/amd64 镜像构建、使用 `start-up.sh offline` 的隔离 Compose 检查通过后，发布 `ghcr.io/<仓库所有者>/piora-analytics:<tag>`。非预发布版本更新 latest。Release 附件包含应用镜像 tar、SHA256SUMS、compose.yaml、start-up.sh、.env.docker.example。工作流存在不代表该版本已发布。
+
+离线部署先核验 SHA256SUMS，加载应用 tar；另外准备并加载 postgres:18 镜像，应用 tar 不含 PostgreSQL。准备目录及配置后运行 offline 模式。私有 GHCR 包需先 docker login ghcr.io。当前 v0.1.2 应用镜像支持此配置读取方式；新的启动文件随下一次 Release 提供，也可从仓库获取。
+
+`bash scripts/build.sh` 构建工作区，`bash scripts/build.sh v1.2.0` 从已有 tag 构建。HTTPS 可参考 [Caddy 配置](../deploy/Caddyfile.example)，切换协议后需重新登录。备份、告警和权限拆分由运维配置，默认单 API、单 Worker。
 
 ## 域账号自动归属
 

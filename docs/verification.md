@@ -90,3 +90,7 @@ GitHub CI 状态以相应提交的 Actions 为准，本文件不预报未来结�
 2026-11-17 配置目录挂载验证：check、typecheck、9 项单元测试、build 通过。独立 Compose 项目使用远端 v0.1.2 镜像与合成配置，从空卷完成初始化、健康检查；init/API/worker 使用宿主机配置目录，API 挂载确认 RW=false，写入探针返回 EROFS。修改宿主机 ANALYTICS_ORIGIN 并重建 API 后，使用新 Origin 登录返回 200。测试目录含空格，覆盖 Windows Docker Desktop 路径。测试容器与卷已清理；未进行企业内网部署验收。
 
 宿主机数据路径验证：check、typecheck、9 项单元测试、build 通过。独立 Compose 使用 v0.1.2 镜像和可丢弃的宿主机目录完成 PostgreSQL 初始化，确认数据库与导出目录为可写 bind mount，配置目录只读；Worker 写入的合成文件可由 API 读取。down/up 重建容器后组织记录及导出文件仍保留；必填数据路径为空时 Compose 校验失败。测试容器已清理，合成测试目录保留在忽略的 .verification 下，现有本地服务未切换存储。
+
+### 统一 Compose 与启动入口验证
+
+check、typecheck、9 项单元测试和 dashboard build 通过。Windows Git Bash 下使用远端 v0.1.2 镜像、带空格的配置路径和独立测试 PostgreSQL 目录，通过 start-up.sh offline 启动隔离项目；数据库和 API 健康、init 正常退出，/health/ready 返回 200。配置目录只读、导出目录可写的 bind 挂载通过检查，旧 scripts/start.sh 转发入口重复启动通过，测试容器已关闭。未改变现有部署，未将上述测试视为真实设备上传验收。Release 工作流已改为测试同一启动脚本，尚未通过新 tag 执行发布。
