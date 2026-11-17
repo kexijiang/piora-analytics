@@ -109,6 +109,7 @@ const params = {
  range:[['from',date('起始日，包含'),true],['to',date('结束日，不包含；日汇总最长 731 天，明细限最近 90 天'),true]],
  filters:[['employee_ids',list(uuid('员工 ID'),'重复 query 参数',500),false],['department_ids',list(uuid('部门 ID'),'重复 query 参数',100),false],['app_versions',list(str('版本',64),'发生时版本',30),false],['sources',list(source,'来源',30),false]],
  pagination:[['limit',{...integer('每页条数',200),minimum:1,default:50},false],['cursor',str('opaque 游标；与筛选、排序绑定',2048),false]],
+ enrollmentSearch:[['search',str('用途名称包含匹配，不区分大小写；空白忽略',120),false]],
  search:[['search',str('姓名/账号/设备检索',120),false]],
 };
 const routes=[];
@@ -151,7 +152,7 @@ route('get','/v1/admin/installations/{id}/bindings','listBindings','绑定历史
 route('post','/v1/admin/installations/{id}/bindings','createBinding','绑定员工','BindingInput','Binding','admin',[],201);
 route('patch','/v1/admin/bindings/{id}','correctBinding','纠正绑定','BindingInput','Binding');
 route('post','/v1/admin/installations/{id}/revoke','revokeInstallation','撤销安装上报权限','RevisionInput','Ok');
-route('get','/v1/admin/enrollment-keys','listEnrollment','注册凭证列表',null,'EnrollmentKeyPage','admin',['pagination']);
+route('get','/v1/admin/enrollment-keys','listEnrollment','注册凭证列表',null,'EnrollmentKeyPage','admin',['pagination','enrollmentSearch']);
 route('post','/v1/admin/enrollment-keys','createEnrollment','创建注册凭证','EnrollmentInput','EnrollmentCreated','admin',[],201);
 route('post','/v1/admin/enrollment-keys/{id}/revoke','revokeEnrollment','撤销注册凭证','RevisionInput','Ok');
 route('get','/v1/admin/settings/sync','getSync','同步策略',null,'SyncPolicy');

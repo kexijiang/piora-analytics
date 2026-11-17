@@ -84,7 +84,7 @@ export async function adminOperation(c, id, b, q, p, ctx) {
       (await employees(c, ctx.org)).filter(
         (r) =>
           !q.search ||
-          (r.name + " " + (r.employee_no ?? "")).includes(q.search),
+          (r.name + " " + (r.employee_no ?? "")).toLowerCase().includes(q.search.trim().toLowerCase()),
       ),
       q,
       ctx,
@@ -331,8 +331,8 @@ export async function adminOperation(c, id, b, q, p, ctx) {
     return page(
       (
         await c.query(
-          "SELECT * FROM enrollment_keys WHERE org_id=$1 ORDER BY created_at DESC,id",
-          [ctx.org],
+          "SELECT id,label,expires_at,max_registrations,used_registrations,revoked_at,revision FROM enrollment_keys WHERE org_id=$1 AND strpos(lower(label), lower($2::text)) > 0 ORDER BY created_at DESC,id",
+          [ctx.org, (q.search ?? "").trim()],
         )
       ).rows.map(enrollDTO),
       q,

@@ -109,6 +109,45 @@ try {
       201,
     )
   ).json().data;
+  const revocable = (
+    await call(
+      "POST",
+      "/v1/admin/enrollment-keys",
+      {
+        label: "合成撤销回归",
+        expires_at: new Date(now + 86400000).toISOString(),
+        max_registrations: 3,
+      },
+      201,
+    )
+  ).json().data;
+  await call("POST", `/v1/admin/enrollment-keys/${revocable.key.id}/revoke`, {
+    expected_revision: revocable.key.revision,
+    reason: "合成回归撤销",
+  });
+  const listedKeys = (await call("GET", "/v1/admin/enrollment-keys")).json()
+    .data.items;
+  assert(listedKeys.find((k) => k.id === revocable.key.id).revoked_at);
+  assert(listedKeys.every((k) => !("secret" in k) && !("secret_hash" in k)));
+  for (let i = 1; i <= 25; i++) {
+    await db.pool.query(
+      "INSERT INTO enrollment_keys(id,org_id,label,secret_hash,expires_at,max_registrations,created_at) VALUES($1,$2,$3,$4,now()+interval '7 days',50,now()-($5::int * interval '1 minute'))",
+      [uuid(), org, "Search-Fixture-" + String(i).padStart(2, "0"), Buffer.alloc(32), i],
+    );
+  }
+  const firstKeys = (await call("GET", "/v1/admin/enrollment-keys?limit=20&search=fixture")).json().data;
+  assert.equal(firstKeys.total, "25");
+  assert.equal(firstKeys.items.length, 20);
+  const keyCursor = encodeURIComponent(firstKeys.next_cursor);
+  const secondKeys = (await call("GET", "/v1/admin/enrollment-keys?limit=20&search=fixture&cursor=" + keyCursor)).json().data;
+  assert.equal(secondKeys.items.length, 5);
+  assert.equal(secondKeys.next_cursor, null);
+  assert.equal(new Set([...firstKeys.items, ...secondKeys.items].map(k => k.id)).size, 25);
+  const foundKey = (await call("GET", "/v1/admin/enrollment-keys?search=fixture-25")).json().data;
+  assert.equal(foundKey.total, "1");
+  assert.equal(foundKey.items[0].label, "Search-Fixture-25");
+  assert.equal((await call("GET", "/v1/admin/enrollment-keys?search=%25")).json().data.total, "0");
+  await call("GET", "/v1/admin/enrollment-keys?limit=20&search=other&cursor=" + keyCursor, undefined, 400);
   const registration = {
     registration_id: uuid(),
     installation_id: uuid(),
@@ -126,6 +165,10 @@ try {
       "file_edit",
     ],
   };
+  await call("POST", "/v1/installations/register", registration, 403, {
+    authorization: "Bearer " + revocable.secret,
+    "idempotency-key": registration.registration_id,
+  });
   const rh = {
     authorization: "Bearer " + enrollment.secret,
     "idempotency-key": registration.registration_id,
@@ -135,7 +178,7 @@ try {
     call("POST", "/v1/installations/register", registration, 201, rh),
   ]);
   assert.equal(
-    (await db.pool.query("SELECT used_registrations FROM enrollment_keys"))
+    (await db.pool.query("SELECT used_registrations FROM enrollment_keys WHERE label='自动测试'"))
       .rows[0].used_registrations,
     1,
   );
@@ -792,6 +835,22 @@ try {
   await call("POST", "/v1/admin/departments", { name: "禁止创建" }, 403);
   await call("GET", "/v1/admin/settings/sync", undefined, 403);
   await call("GET", "/v1/admin/analytics/overview" + query);
+  for (let i = 1; i <= 25; i++) {
+    await db.pool.query("INSERT INTO employees(id,org_id,name,employee_no) VALUES($1,$2,$3,$4)",
+      [uuid(), org, "员工合成" + String(i).padStart(2, "0"), "STAFF-" + String(i).padStart(2, "0")]);
+  }
+  const employeePage = (await call("GET", "/v1/admin/employees?limit=20&search=staff")).json().data;
+  assert.equal(employeePage.total, "25");
+  assert.equal(employeePage.items.length, 20);
+  const employeeCursor = encodeURIComponent(employeePage.next_cursor);
+  const employeePage2 = (await call("GET", "/v1/admin/employees?limit=20&search=staff&cursor=" + employeeCursor)).json().data;
+  assert.equal(employeePage2.items.length, 5);
+  assert.equal(employeePage2.next_cursor, null);
+  assert.equal(new Set([...employeePage.items, ...employeePage2.items].map(e => e.id)).size, 25);
+  assert.equal((await call("GET", "/v1/admin/employees?search=staff-25")).json().data.items[0].name, "员工合成25");
+  assert.equal((await call("GET", "/v1/admin/employees?search=" + encodeURIComponent("员工合成25"))).json().data.total, "1");
+  assert.equal((await call("GET", "/v1/admin/employees?search=missing-staff")).json().data.total, "0");
+  await call("GET", "/v1/admin/employees?limit=20&search=other&cursor=" + employeeCursor, undefined, 400);
   console.log(
     "HTTP + PostgreSQL integration passed: authentication/RBAC, registration replay, binding, ingest/dedup/rejection, aggregation, all reports, CSV export, credential rotation.",
   );

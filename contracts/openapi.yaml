@@ -5069,6 +5069,16 @@ paths:
           schema: *a8
           style: form
           explode: true
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            description: 用途名称包含匹配，不区分大小写；空白忽略
+            minLength: 1
+            maxLength: 120
+          style: form
+          explode: true
       security:
         - AdminSession: []
       responses:

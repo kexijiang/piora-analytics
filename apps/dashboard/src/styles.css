@@ -1459,3 +1459,20 @@ tbody tr:hover {
     padding: 28px 20px;
   }
 }
+
+.enrollment-dialog {
+  margin: auto;
+  color: var(--text);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+}
+.enrollment-dialog::backdrop { background: rgb(15 23 42 / 45%); }
+.enrollment-message { padding: 0 24px 20px; }
+.enrollment-dialog textarea { width: 100%; box-sizing: border-box; }
+.enrollment-search { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; padding: 0 24px 20px; }
+.enrollment-search label { display: grid; gap: 8px; font-size: 12px; }
+.enrollment-search input { width: 260px; max-width: 100%; }
+.enrollment-pagination { flex-wrap: wrap; }
+.enrollment-panel .table-wrap { max-height: 480px; overflow: auto; }
+.enrollment-panel th { position: sticky; top: 0; z-index: 1; }
