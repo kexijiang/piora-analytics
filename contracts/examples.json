@@ -1061,7 +1061,7 @@
     "schema": "BindingInput",
     "value": {
       "employee_id": "10000000-0000-4000-8000-000000000001",
-      "valid_from": "2026-11-13",
+      "valid_from": null,
       "valid_to": null,
       "reason": "示例值",
       "expected_revision": 0
@@ -1075,7 +1075,7 @@
         "id": "10000000-0000-4000-8000-000000000001",
         "installation_id": "10000000-0000-4000-8000-000000000001",
         "employee_id": "10000000-0000-4000-8000-000000000001",
-        "valid_from": "2026-11-13",
+        "valid_from": null,
         "valid_to": null,
         "reason": "示例值",
         "revision": 0
@@ -1091,7 +1091,7 @@
     "schema": "BindingInput",
     "value": {
       "employee_id": "10000000-0000-4000-8000-000000000001",
-      "valid_from": "2026-11-13",
+      "valid_from": null,
       "valid_to": null,
       "reason": "示例值",
       "expected_revision": 0
@@ -1105,7 +1105,7 @@
         "id": "10000000-0000-4000-8000-000000000001",
         "installation_id": "10000000-0000-4000-8000-000000000001",
         "employee_id": "10000000-0000-4000-8000-000000000001",
-        "valid_from": "2026-11-13",
+        "valid_from": null,
         "valid_to": null,
         "reason": "示例值",
         "revision": 0

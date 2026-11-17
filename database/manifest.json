@@ -23,7 +23,7 @@
     },
     {
       "name": "installations",
-      "columns": 15,
+      "columns": 16,
       "description": "Windows 安装实例，用户名仅供匹配"
     },
     {

@@ -635,7 +635,7 @@ paths:
   /v1/admin/settings/identity:
     get:
       operationId: getIdentityPolicy
-      summary: 域账号自动匹配规则
+      summary: 固定账号自动关联行为（兼容接口）
       tags:
         - admin
       parameters: []
@@ -729,7 +729,7 @@ paths:
       x-business-rules: 见 docs/api-behavior.md；安装/组织归属来自认证上下文，不接受客户端 employee_id
     patch:
       operationId: updateIdentityPolicy
-      summary: 修改域账号自动匹配规则
+      summary: 兼容旧版保存请求；返回固定自动关联策略
       tags:
         - admin
       parameters:
@@ -5129,7 +5129,7 @@ paths:
                   id: 10000000-0000-4000-8000-000000000001
                   installation_id: 10000000-0000-4000-8000-000000000001
                   employee_id: 10000000-0000-4000-8000-000000000001
-                  valid_from: 2026-11-13
+                  valid_from: null
                   valid_to: null
                   reason: 示例值
                   revision: 0
@@ -5214,7 +5214,7 @@ paths:
               $ref: "#/components/schemas/BindingInput"
             example:
               employee_id: 10000000-0000-4000-8000-000000000001
-              valid_from: 2026-11-13
+              valid_from: null
               valid_to: null
               reason: 示例值
               expected_revision: 0
@@ -5262,7 +5262,7 @@ paths:
                   id: 10000000-0000-4000-8000-000000000001
                   installation_id: 10000000-0000-4000-8000-000000000001
                   employee_id: 10000000-0000-4000-8000-000000000001
-                  valid_from: 2026-11-13
+                  valid_from: null
                   valid_to: null
                   reason: 示例值
                   revision: 0
@@ -5347,7 +5347,7 @@ paths:
               $ref: "#/components/schemas/BindingInput"
             example:
               employee_id: 10000000-0000-4000-8000-000000000001
-              valid_from: 2026-11-13
+              valid_from: null
               valid_to: null
               reason: 示例值
               expected_revision: 0
@@ -7573,15 +7573,15 @@ components:
           maximum: 2147483647
         enabled:
           type: boolean
-          description: 自动关联是否启用
+          description: 兼容字段，服务端固定为 true
         auto_create:
           type: boolean
-          description: 是否自动创建员工
+          description: 兼容字段，服务端固定为 true
         rules:
           type: array
           items:
             $ref: "#/components/schemas/IdentityRule"
-          description: 允许的域及工号校验规则；同一组织内工号全局唯一
+          description: 兼容字段，服务端固定为空；所有域均按账号匹配工号
           maxItems: 20
       required:
         - version
@@ -7641,6 +7641,7 @@ components:
             - none
             - manual
             - domain
+            - automatic
           description: 当前绑定来源
       required:
         - identity
@@ -7863,9 +7864,11 @@ components:
         installation_id: *a10
         employee_id: *a10
         valid_from:
-          type: string
-          format: date
-          description: 包含
+          anyOf:
+            - type: string
+              format: date
+              description: 包含；null 覆盖全部历史
+            - type: "null"
         valid_to:
           anyOf:
             - type: string
@@ -7896,9 +7899,11 @@ components:
       properties:
         employee_id: *a10
         valid_from:
-          type: string
-          format: date
-          description: 包含；北京时间自然日
+          anyOf:
+            - type: string
+              format: date
+              description: 包含；北京时间自然日；null 覆盖全部历史
+            - type: "null"
         valid_to:
           anyOf:
             - type: string

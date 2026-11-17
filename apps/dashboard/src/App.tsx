@@ -980,7 +980,7 @@ export default function App() {
             Number(overview.unconfirmed_installations) > 0 && (
               <div className="panel identity-notice" role="status">
                 已接入 {overview.unconfirmed_installations}{" "}
-                台未关联员工的设备，设备数据仍计入总览。可在组织设置配置域账号规则，或到采集健康手动关联。
+                台未关联员工的设备，设备数据仍计入总览。系统会自动匹配上报账号；身份未知或冲突可到采集健康处理。
               </div>
             )}
           {showError ? (
@@ -1474,7 +1474,7 @@ export default function App() {
                     <div className="panel-heading">
                       <div>
                         <h2>安装实例与同步状态</h2>
-                        <p>允许的域账号可自动关联；身份冲突可由管理员纠错</p>
+                        <p>域账号和本地账号自动关联员工；身份冲突可由管理员纠错</p>
                       </div>
                       <span className="pill">
                         {appliedPolicy
@@ -1541,8 +1541,9 @@ export default function App() {
                                 </Badge>
                                 <div className="muted">
                                   {identityLabel(i.identity_status?.state)}
-                                  {i.identity_status?.binding_source ===
-                                  "domain"
+                                  {["domain", "automatic"].includes(
+                                    i.identity_status?.binding_source ?? "",
+                                  )
                                     ? " · 自动关联"
                                     : ""}
                                 </div>
@@ -1765,14 +1766,17 @@ export default function App() {
                         </div>
                       </section>
                     </div>
-                    <IdentitySettings admin={admin} />
+                    <IdentitySettings />
                     <EnrollmentKeys />
-                    <section className="panel table-panel enrollment-panel" aria-label="员工管理">
+                    <section
+                      className="panel table-panel enrollment-panel"
+                      aria-label="员工管理"
+                    >
                       <div className="panel-heading">
                         <div>
                           <h2>员工与部门</h2>
                           <p>
-                            可通过域账号规则自动关联；个人设备也可先创建员工，再手动绑定
+                            上报账号自动创建并关联员工；可补充姓名和部门，或在采集健康纠正归属
                           </p>
                           <p>
                             已建部门：
@@ -1806,7 +1810,10 @@ export default function App() {
                           </button>
                         </div>
                       </div>
-                      <EmployeeTable departments={catalog.departments} refresh={refresh} />
+                      <EmployeeTable
+                        departments={catalog.departments}
+                        refresh={refresh}
+                      />
                     </section>
                     <section className="panel table-panel">
                       <div className="panel-heading">

@@ -97,6 +97,7 @@ Windows 安装实例，用户名仅供匹配。
 | last_event_at | timestamptz | 可空 | 最近可信发生时间 |
 | reported_queue_events | bigint | NOT NULL DEFAULT 0 CHECK (reported_queue_events >= 0) | 上次报告积压 |
 | revision | integer | NOT NULL DEFAULT 1 CHECK (revision > 0) | 乐观锁版本 |
+| identity_match_version | integer | NOT NULL DEFAULT 0 | 自动账号关联处理版本；0 为等待后台回补 |
 
 表约束：
 
@@ -117,13 +118,13 @@ Windows 安装实例，用户名仅供匹配。
 | reason | varchar(500) | NOT NULL | 绑定/纠错原因 |
 | revision | integer | NOT NULL DEFAULT 1 CHECK (revision > 0) | 乐观锁版本 |
 | created_at | timestamptz | NOT NULL DEFAULT now() | 创建时间 |
-| source | text | NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','domain')) | manual 人工优先；domain 自动关联 |
+| source | text | NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','domain','automatic')) | manual 人工优先；domain 旧版域关联；automatic 自动账号关联 |
 
 表约束：
 
 - FOREIGN KEY (org_id, installation_id) REFERENCES installations(org_id, id)
 - FOREIGN KEY (org_id, employee_id) REFERENCES employees(org_id, id)
-- CHECK (NOT isempty(valid_days) AND lower(valid_days) IS NOT NULL AND lower_inc(valid_days) AND NOT upper_inc(valid_days))
+- CHECK (NOT isempty(valid_days) AND (lower_inf(valid_days) OR lower_inc(valid_days)) AND NOT upper_inc(valid_days))
 - EXCLUDE USING gist (org_id WITH =, installation_id WITH =, valid_days WITH &&)
 
 ## admin_accounts
@@ -676,7 +677,7 @@ Windows 安装实例，用户名仅供匹配。
 |---|---|---|---|
 | org_id | uuid | NOT NULL REFERENCES organizations(id) | 组织隔离键 |
 | installation_id | uuid | NOT NULL | 安装 |
-| claim | jsonb | NOT NULL | 最近报告的身份 |
+| claim | jsonb | NOT NULL | 最近报告的身份；JSON null 表示旧客户端仅报告注册用户名 |
 | state | varchar(40) | NOT NULL | 最近匹配结果 |
 | updated_at | timestamptz | NOT NULL DEFAULT now() | 最近变化 |
 

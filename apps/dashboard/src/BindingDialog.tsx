@@ -48,10 +48,11 @@ export function BindingDialog({
           const current = rows.find(
             (b) =>
               b.employee_id === installation.employee_id &&
-              b.valid_from <=
-                new Date().toLocaleDateString("sv-SE", {
-                  timeZone: "Asia/Shanghai",
-                }) &&
+              (!b.valid_from ||
+                b.valid_from <=
+                  new Date().toLocaleDateString("sv-SE", {
+                    timeZone: "Asia/Shanghai",
+                  })) &&
               (!b.valid_to ||
                 b.valid_to >
                   new Date().toLocaleDateString("sv-SE", {
@@ -60,7 +61,7 @@ export function BindingDialog({
           );
           if (current) {
             setSelected(current.id);
-            setStart(current.valid_from);
+            setStart(current.valid_from ?? "");
             setEnd(current.valid_to ?? "");
           }
           setLoading(false);
@@ -104,7 +105,7 @@ export function BindingDialog({
                   : `/v1/admin/installations/${installation.id}/bindings`,
                 {
                   employee_id: employee,
-                  valid_from: start,
+                  valid_from: start || null,
                   valid_to: end || null,
                   reason,
                   expected_revision:
@@ -131,7 +132,7 @@ export function BindingDialog({
                 onChange={(e) => {
                   setSelected(e.target.value);
                   const b = history.find((b) => b.id === e.target.value);
-                  setStart(b?.valid_from ?? from);
+                  setStart(b ? (b.valid_from ?? "") : from);
                   setEnd(b?.valid_to ?? "");
                   setEmployee(b?.employee_id ?? employees[0]?.id ?? "");
                 }}
@@ -139,7 +140,7 @@ export function BindingDialog({
                 <option value="">新增绑定期间</option>
                 {history.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.valid_from} 至 {b.valid_to ?? "持续"} ·{" "}
+                    {b.valid_from ?? "全部历史"} 至 {b.valid_to ?? "持续"} ·{" "}
                     {employees.find((e) => e.id === b.employee_id)?.name ??
                       b.employee_id}
                   </option>
@@ -171,10 +172,9 @@ export function BindingDialog({
           </label>
           <div className="input-pair">
             <label>
-              生效日期
+              生效日期（留空包含全部历史）
               <input
                 type="date"
-                required
                 value={start}
                 onChange={(e) => setStart(e.target.value)}
               />

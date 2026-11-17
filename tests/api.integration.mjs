@@ -153,6 +153,7 @@ try {
     installation_id: uuid(),
     credential: { credential_id: uuid(), secret: "A".repeat(43) },
     windows_username: "demo-windows-user",
+    windows_identity: { account_type: "unknown", domain: null, account_name: null, source: "unavailable" },
     device_label: "DEMO-PC",
     app_version: "0.5.11",
     sdk_version: "1",

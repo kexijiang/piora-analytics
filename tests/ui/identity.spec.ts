@@ -48,17 +48,17 @@ test("unbound device statistics, empty employee guidance and domain auto matchin
     await page.getByRole("button", { name: "创建员工", exact: true }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.getByRole("button", { name: "关闭表单" }).click();
-    await page.getByLabel("启用域账号自动关联").check();
-    await page.getByLabel("不存在时自动创建员工").check();
-    await page.getByRole("button", { name: "添加域规则", exact: true }).click();
-    await page.getByLabel("域名 1", { exact: true }).fill("CHINA");
-    await page.getByRole("button", { name: "添加域规则", exact: true }).click();
-    await page.getByLabel("域名 2", { exact: true }).fill("OTHER");
-    await expect(page.getByLabel(/工号前缀/)).toHaveCount(0);
-    await page
-      .getByRole("button", { name: "保存域账号规则", exact: true })
-      .click();
-    await expect(page.getByText(/域账号规则已保存/)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "账号自动关联", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("新上报和历史记录均自动关联员工，无需配置或保存。"),
+    ).toBeVisible();
+    await expect(page.getByLabel("启用域账号自动关联")).toHaveCount(0);
+    await expect(page.getByLabel("不存在时自动创建员工")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "保存域账号规则", exact: true }),
+    ).toHaveCount(0);
     // The authenticated device request prepares the real automatic-matching result.
     const response = await page.request.post("/v1/installations/identity", {
       headers: {
@@ -94,7 +94,7 @@ test("unbound device statistics, empty employee guidance and domain auto matchin
     expect((await moved.json()).data.state).toBe("matched");
     await page.reload();
     await page.getByRole("button", { name: /采集健康/ }).click();
-    await expect(page.getByText("域账号匹配成功 · 自动关联")).toBeVisible();
+    await expect(page.getByText("账号匹配成功 · 自动关联")).toBeVisible();
     await expect(
       page.getByRole("table").getByText("001234", { exact: true }).first(),
     ).toBeVisible();
@@ -135,9 +135,14 @@ test("unbound device statistics, empty employee guidance and domain auto matchin
         .first(),
     ).toBeVisible();
     await page.getByRole("button", { name: "组织设置", exact: true }).click();
-    await expect(page.getByLabel("域名 1", { exact: true })).toHaveValue(
-      "CHINA",
-    );
+    await page.reload();
+    await page.getByRole("button", { name: "组织设置", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "账号自动关联", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "添加域规则", exact: true }),
+    ).toHaveCount(0);
     await page.screenshot({
       path: ".verification/domain-identity-browser.png",
       fullPage: true,

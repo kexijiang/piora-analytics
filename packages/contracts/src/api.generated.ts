@@ -113,14 +113,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 域账号自动匹配规则 */
+        /** 固定账号自动关联行为（兼容接口） */
         get: operations["getIdentityPolicy"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** 修改域账号自动匹配规则 */
+        /** 兼容旧版保存请求；返回固定自动关联策略 */
         patch: operations["updateIdentityPolicy"];
         trace?: never;
     };
@@ -1116,11 +1116,11 @@ export interface components {
         IdentityPolicy: {
             /** @description 版本 */
             version: number;
-            /** @description 自动关联是否启用 */
+            /** @description 兼容字段，服务端固定为 true */
             enabled: boolean;
-            /** @description 是否自动创建员工 */
+            /** @description 兼容字段，服务端固定为 true */
             auto_create: boolean;
-            /** @description 允许的域及工号校验规则；同一组织内工号全局唯一 */
+            /** @description 兼容字段，服务端固定为空；所有域均按账号匹配工号 */
             rules: components["schemas"]["IdentityRule"][];
         };
         IdentityPolicyUpdate: {
@@ -1142,7 +1142,7 @@ export interface components {
              * @description 当前绑定来源
              * @enum {string}
              */
-            binding_source: "none" | "manual" | "domain";
+            binding_source: "none" | "manual" | "domain" | "automatic";
         };
         IdentityUpdate: {
             identity: components["schemas"]["WindowsIdentity"];
@@ -1273,11 +1273,7 @@ export interface components {
              * @description 稳定 UUID，不能使用用户名代替
              */
             employee_id: string;
-            /**
-             * Format: date
-             * @description 包含
-             */
-            valid_from: string;
+            valid_from: string | null;
             valid_to: string | null;
             /** @description 绑定/纠错原因 */
             reason: string;
@@ -1290,11 +1286,7 @@ export interface components {
              * @description 稳定 UUID，不能使用用户名代替
              */
             employee_id: string;
-            /**
-             * Format: date
-             * @description 包含；北京时间自然日
-             */
-            valid_from: string;
+            valid_from: string | null;
             valid_to: string | null;
             /** @description 原因 */
             reason: string;
@@ -7908,7 +7900,7 @@ export interface operations {
                 /**
                  * @example {
                  *       "employee_id": "10000000-0000-4000-8000-000000000001",
-                 *       "valid_from": "2026-11-13",
+                 *       "valid_from": null,
                  *       "valid_to": null,
                  *       "reason": "示例值",
                  *       "expected_revision": 0
@@ -7930,7 +7922,7 @@ export interface operations {
                      *         "id": "10000000-0000-4000-8000-000000000001",
                      *         "installation_id": "10000000-0000-4000-8000-000000000001",
                      *         "employee_id": "10000000-0000-4000-8000-000000000001",
-                     *         "valid_from": "2026-11-13",
+                     *         "valid_from": null,
                      *         "valid_to": null,
                      *         "reason": "示例值",
                      *         "revision": 0
@@ -8048,7 +8040,7 @@ export interface operations {
                 /**
                  * @example {
                  *       "employee_id": "10000000-0000-4000-8000-000000000001",
-                 *       "valid_from": "2026-11-13",
+                 *       "valid_from": null,
                  *       "valid_to": null,
                  *       "reason": "示例值",
                  *       "expected_revision": 0
@@ -8070,7 +8062,7 @@ export interface operations {
                      *         "id": "10000000-0000-4000-8000-000000000001",
                      *         "installation_id": "10000000-0000-4000-8000-000000000001",
                      *         "employee_id": "10000000-0000-4000-8000-000000000001",
-                     *         "valid_from": "2026-11-13",
+                     *         "valid_from": null,
                      *         "valid_to": null,
                      *         "reason": "示例值",
                      *         "revision": 0

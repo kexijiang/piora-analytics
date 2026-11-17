@@ -96,6 +96,24 @@ const domainAccounts=tables.find(t=>t.name==='employee_domain_accounts');
 domainAccounts.description='已报告域账号的归属记录；多个允许域的同一工号归到同一员工';
 domainAccounts.constraints=domainAccounts.constraints.filter(x=>x!=='UNIQUE (org_id,employee_id)');
 const globalEmployeeSql="-- Employee numbers are unique within an organization, across all allowed domains.\nBEGIN;\nALTER TABLE employee_domain_accounts DROP CONSTRAINT employee_domain_accounts_org_id_employee_id_key;\nUPDATE org_settings SET value=jsonb_set(value, '{rules}', COALESCE((SELECT jsonb_agg(rule - 'employee_prefix') FROM jsonb_array_elements(value->'rules') AS rule), '[]'::jsonb)), updated_at=now() WHERE name='identity';\nCOMMIT;\n";
+// Preserve deployed migrations; enable fixed automatic matching in an additive upgrade.
+const automaticIdentitySql = `-- Automatic account association and resumable historical reconciliation.
+BEGIN;
+ALTER TABLE installations ADD COLUMN identity_match_version integer NOT NULL DEFAULT 0;
+CREATE INDEX installations_identity_pending ON installations(org_id,id) WHERE identity_match_version<1;
+ALTER TABLE installation_bindings DROP CONSTRAINT installation_bindings_valid_days_check;
+ALTER TABLE installation_bindings ADD CONSTRAINT installation_bindings_valid_days_check CHECK (NOT isempty(valid_days) AND (lower_inf(valid_days) OR lower_inc(valid_days)) AND NOT upper_inc(valid_days));
+ALTER TABLE installation_bindings DROP CONSTRAINT installation_bindings_source_check;
+ALTER TABLE installation_bindings ADD CONSTRAINT installation_bindings_source_check CHECK (source IN ('manual','domain','automatic'));
+UPDATE org_settings SET value=jsonb_build_object('version',COALESCE((value->>'version')::int,0)+1,'enabled',true,'auto_create',true,'rules','[]'::jsonb),revision=revision+1,updated_at=now() WHERE name='identity';
+COMMIT;
+`;
+tables.find(t=>t.name==='installations').cols.push(c('identity_match_version','integer','自动账号关联处理版本；0 为等待后台回补','NOT NULL DEFAULT 0'));
+tables.find(t=>t.name==='installation_bindings').constraints=tables.find(t=>t.name==='installation_bindings').constraints.map(x=>x.startsWith('CHECK (NOT isempty') ? 'CHECK (NOT isempty(valid_days) AND (lower_inf(valid_days) OR lower_inc(valid_days)) AND NOT upper_inc(valid_days))' : x);
+const bindingSource=tables.find(t=>t.name==='installation_bindings').cols.find(c=>c.name==='source');
+bindingSource.extra="NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','domain','automatic'))";
+bindingSource.description='manual 人工优先；domain 旧版域关联；automatic 自动账号关联';
+tables.find(t=>t.name==='installation_identities').cols.find(c=>c.name==='claim').description='最近报告的身份；JSON null 表示旧客户端仅报告注册用户名';
 let md='# 数据库字段字典（自动生成）\n\nPostgreSQL 18；UTC timestamptz，统计日固定 Asia/Shanghai。初始化 SQL：[0001_initial.sql](../database/migrations/0001_initial.sql)。所有计数在 API 中为十进制字符串；NULL 不能转换为零。跨表关系、重算、保留与事务见 [数据库行为](database-design.md)。\n\n';
 for(const t of tables){
  md+='## '+t.name+'\n\n'+t.description+'。\n\n| 字段 | PostgreSQL 类型 | SQL 约束/默认值 | 说明 |\n|---|---|---|---|\n';
@@ -106,6 +124,7 @@ const write=(p,t)=>{const f=path.join(root,p);fs.mkdirSync(path.dirname(f),{recu
 write('database/migrations/0001_initial.sql',sql);
 write('database/migrations/0002_domain_identity.sql',identitySql);
 write('database/migrations/0003_global_employee_numbers.sql',globalEmployeeSql);
+write('database/migrations/0004_automatic_identity.sql',automaticIdentitySql);
 write('docs/database-reference.md',md.trimEnd()+'\n');
 write('database/manifest.json',JSON.stringify({postgres_major:18,tables:tables.map(t=>({name:t.name,columns:t.cols.length,description:t.description}))},null,2)+'\n');
 console.log('Generated '+tables.length+' tables.');
