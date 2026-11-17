@@ -1,14 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-if [[ ! -f .env ]]; then
-  echo 'Copy .env.docker.example to .env and configure secrets, origin and initial administrator first.' >&2
+mode="${1:-local}"
+case "$mode" in
+  local|image|offline) ;;
+  *) echo 'Usage: bash scripts/start.sh [local|image|offline] [config-directory]' >&2; exit 1 ;;
+esac
+config_dir="${2:-${CONFIG_DIR:-./config}}"
+if [[ ! -f "$config_dir/.env" ]]; then
+  echo "Create $config_dir/.env from .env.docker.example and configure secrets and existing data directories first." >&2
   exit 1
 fi
-case "${1:-local}" in
-  local) docker compose build ;;
-  image) docker compose pull ;;
-  offline) ;;
-  *) echo 'Usage: bash scripts/start.sh [local|image|offline]' >&2; exit 1 ;;
+# Use the same directory for Compose interpolation and the container mount.
+case "${OSTYPE:-}" in
+  msys*|cygwin*) CONFIG_DIR="$(cd "$config_dir" && pwd -W)" ;;
+  *) CONFIG_DIR="$(cd "$config_dir" && pwd -P)" ;;
 esac
-docker compose up -d --no-build --pull never --wait --wait-timeout 180
+export CONFIG_DIR
+compose=(docker compose -f compose.yaml --env-file "$CONFIG_DIR/.env")
+"${compose[@]}" config --quiet
+case "$mode" in
+  local) "${compose[@]}" build ;;
+  image) "${compose[@]}" pull ;;
+  offline) ;;
+esac
+"${compose[@]}" up -d --no-build --pull never --wait --wait-timeout 180
