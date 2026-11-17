@@ -1,4 +1,3 @@
-import { reconcileIdentities } from "./identity.mjs";
 import path from "node:path";
 import { createPool, root } from "../../api/src/core.mjs";
 import { runAggregation } from "./aggregate.mjs";
@@ -23,7 +22,6 @@ while (!stopped) {
       await maintain(pool, config);
       lastMaintenance = Date.now();
     }
-    await reconcileIdentities(pool, 50);
     await runAggregation(pool, 50);
     await runExports(pool, config);
   } catch (error) {

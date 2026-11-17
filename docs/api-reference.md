@@ -2140,7 +2140,7 @@
 
 ## GET /health/ready
 
-数据库与迁移就绪。operationId: readiness；最低角色：public。
+数据库初始化就绪。operationId: readiness；最低角色：public。
 
 | 参数 | 位置 | 类型 | 必填 | 说明 |
 |---|---|---|---|---|
@@ -2378,7 +2378,7 @@
 | identity | WindowsIdentity / null | true | {} | 见引用对象 |
 | state | string | true | {"enum":["missing","local","unknown","disabled","domain_not_allowed","invalid_account","employee_missing","employee_archived","identity_conflict","binding_preserved","matched"]} | 匹配结果 |
 | employee_id | string / null | true | {} | 稳定 UUID，不能使用用户名代替 |
-| binding_source | string | true | {"enum":["none","manual","domain","automatic"]} | 当前绑定来源 |
+| binding_source | string | true | {"enum":["none","manual","automatic"]} | 当前绑定来源 |
 
 ## IdentityUpdate
 

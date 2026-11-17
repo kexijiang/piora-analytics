@@ -1,6 +1,6 @@
 # 数据库关系、事务与保留
 
-完整 29 张表和列说明见 [字段字典](database-reference.md)，初始化 [SQL](../database/migrations/0001_initial.sql)。本设计使用 PostgreSQL 18 的 range/multirange 与 btree_gist；时间使用 timestamptz，不依赖数据库会话时区计算业务日期。
+完整 31 张表和列说明见 [字段字典](database-reference.md)，初始化 [SQL](../database/schema.sql)。本设计使用 PostgreSQL 18 的 range/multirange 与 btree_gist；时间使用 timestamptz，不依赖数据库会话时区计算业务日期。
 
 ~~~mermaid
 erDiagram

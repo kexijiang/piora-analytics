@@ -8,7 +8,7 @@ import {
   ApiError,
   spec,
   root,
-  migrationNames,
+  databaseReady,
   uuid,
   iso,
   transaction,
@@ -181,14 +181,7 @@ export async function createServer(pool, config) {
               meta: { request_id: req.id, server_time: iso() },
             };
           if (id === "readiness") {
-            const applied = await pool.query(
-              "SELECT name FROM schema_migrations",
-            );
-            if (
-              !migrationNames.every((name) =>
-                applied.rows.some((row) => row.name === name),
-              )
-            )
+            if (!(await databaseReady(pool)))
               throw new ApiError(503, "NOT_READY");
             return {
               data: { status: "ok" },

@@ -1,8 +1,7 @@
 import path from "node:path";
-import { createPool, migrate, root } from "./core.mjs";
+import { createPool, root } from "./core.mjs";
 import { createServer } from "./server.mjs";
 const pool = createPool(process.env.DATABASE_URL);
-if (process.env.MIGRATE_ON_START === "true") await migrate(pool);
 const org = (await pool.query("SELECT id,name FROM organizations LIMIT 2"))
   .rows;
 if (org.length !== 1)

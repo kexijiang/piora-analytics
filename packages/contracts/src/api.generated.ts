@@ -801,7 +801,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 数据库与迁移就绪 */
+        /** 数据库初始化就绪 */
         get: operations["readiness"];
         put?: never;
         post?: never;
@@ -1142,7 +1142,7 @@ export interface components {
              * @description 当前绑定来源
              * @enum {string}
              */
-            binding_source: "none" | "manual" | "domain" | "automatic";
+            binding_source: "none" | "manual" | "automatic";
         };
         IdentityUpdate: {
             identity: components["schemas"]["WindowsIdentity"];

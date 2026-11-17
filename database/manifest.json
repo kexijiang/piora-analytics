@@ -23,7 +23,7 @@
     },
     {
       "name": "installations",
-      "columns": 16,
+      "columns": 15,
       "description": "Windows 安装实例，用户名仅供匹配"
     },
     {
@@ -149,12 +149,12 @@
     {
       "name": "installation_identities",
       "columns": 5,
-      "description": "客户端域身份及最近匹配结果，不代表企业认证"
+      "description": "客户端身份及最近匹配结果，不代表企业认证"
     },
     {
       "name": "employee_domain_accounts",
       "columns": 5,
-      "description": "已报告域账号的归属记录；多个允许域的同一工号归到同一员工"
+      "description": "已报告域账号的归属记录；跨域同工号归到同一员工"
     }
   ]
 }

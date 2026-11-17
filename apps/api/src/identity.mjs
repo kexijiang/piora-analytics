@@ -81,10 +81,6 @@ export async function matchIdentity(c, claim, ctx) {
     )
   ).rows[0];
   const finish = async (state) => {
-    await c.query(
-      "UPDATE installations SET identity_match_version=1 WHERE org_id=$1 AND id=$2",
-      [ctx.org, ctx.installation],
-    );
     if (
       !old ||
       !sameHash(digest(old.claim), digest(claim)) ||
@@ -128,7 +124,7 @@ export async function matchIdentity(c, claim, ctx) {
   // Manual decisions always take priority, including historical and future periods.
   const bindings = (
     await c.query(
-      "SELECT id,employee_id,source,lower_inf(valid_days) AS all_history,upper_inf(valid_days) AS open_end FROM installation_bindings WHERE org_id=$1 AND installation_id=$2",
+      "SELECT employee_id,source FROM installation_bindings WHERE org_id=$1 AND installation_id=$2",
       [ctx.org, ctx.installation],
     )
   ).rows;
@@ -194,28 +190,6 @@ export async function matchIdentity(c, claim, ctx) {
       "installation",
       ctx.installation,
       "自动关联员工；包含历史及后续补传的统计",
-    );
-  }
-  if (
-    bindings.length === 1 &&
-    bindings[0].open_end &&
-    !bindings[0].all_history
-  ) {
-    await c.query(
-      "UPDATE installation_bindings SET valid_days=daterange(NULL,NULL,'[)'),revision=revision+1,reason='自动关联回补历史统计' WHERE id=$1",
-      [bindings[0].id],
-    );
-    await c.query(
-      "UPDATE installations SET revision=revision+1 WHERE org_id=$1 AND id=$2",
-      [ctx.org, ctx.installation],
-    );
-    await audit(
-      c,
-      { ...ctx, account: { id: ctx.installation } },
-      "identity.binding.backfilled",
-      "installation",
-      ctx.installation,
-      "将已有自动归属扩展到历史统计；保留人工归属",
     );
   }
   return finish("matched");

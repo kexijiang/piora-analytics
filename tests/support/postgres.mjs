@@ -2,10 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import net from "node:net";
 import EmbeddedPostgres from "embedded-postgres";
-import { root, createPool, migrate } from "../../apps/api/src/core.mjs";
+import { root, createPool, initializeDatabase } from "../../apps/api/src/core.mjs";
 export async function testDatabase({
   isolatedDatabase = false,
-  beforeMigrate,
 } = {}) {
   let server;
   let parentPool, databaseName;
@@ -69,8 +68,7 @@ export async function testDatabase({
       await pool.query("SELECT to_regclass('public.organizations') AS name")
     ).rows[0].name;
     if (exists) throw new Error("Test database must be empty");
-    if (beforeMigrate) await beforeMigrate(pool);
-    await migrate(pool);
+    await initializeDatabase(pool);
   } catch (error) {
     await close();
     throw error;

@@ -27,7 +27,7 @@ npm run dev
 | 服务边界、规模、部署 | [后端架构](docs/architecture.md) |
 | 什么时候传、传什么、重试和去重 | [同步协议](docs/sync-protocol.md) |
 | 全部接口与每个字段 | [OpenAPI 3.1.1](contracts/openapi.yaml)、[字段级 API 参考](docs/api-reference.md)、[业务约束](docs/api-behavior.md) |
-| 表结构、索引、事务、保留 | [数据库设计](docs/database-design.md)、[字段字典](docs/database-reference.md)、[初始化 SQL](database/migrations/0001_initial.sql) |
+| 表结构、索引、事务、保留 | [数据库设计](docs/database-design.md)、[字段字典](docs/database-reference.md)、[初始化 SQL](database/schema.sql) |
 | Piora 应改哪里、如何避免漏计/重计 | [客户端接入](docs/piora-integration.md) |
 | 看板画面、交互、状态 | [UI 规范与图集](docs/ui/design.md)、[React 原型](apps/dashboard/src/App.tsx) |
 | 安全、部署与运维 | [运行与部署](docs/deployment.md)、[安全与运维](docs/security-operations.md) |

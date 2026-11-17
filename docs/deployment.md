@@ -34,7 +34,7 @@ bash scripts/start.sh local
 # 等价：docker compose build && docker compose up -d --no-build --wait
 ~~~
 
-Compose 自动等待数据库健康，init 服务执行迁移并仅在空库创建组织/管理员，随后启动 API（含看板）和 Worker。首次登录强制修改密码；初始化后可从 .env 移除 INIT_ADMIN_PASSWORD。后续 init 只迁移，不重置已有账号。不要运行两个不同版本的部署同时迁移同一数据库。
+Compose 自动等待数据库健康，init 服务从 database/schema.sql 初始化空库并创建组织/管理员，随后启动 API（含看板）和 Worker。首次登录强制修改密码；初始化后可从 .env 移除 INIT_ADMIN_PASSWORD。重复启动保留已有账号和数据，不执行版本迁移。结构不完整的库会拒绝初始化，不会自动删库。
 
 API 默认映射 127.0.0.1；内网示例使用 BIND_ADDRESS=0.0.0.0，APP_PORT=4319。数据库不对宿主机暴露端口。健康检查为 `/health/ready`。Worker 没有独立健康检查，运行状态不代表已完成聚合。
 
@@ -115,17 +115,17 @@ docker compose exec -T database pg_dump -U analytics -d piora_analytics -Fc > "$
 
 同时安全备份 `.env`，保持 PEPPER 不变。备份需要定期在隔离数据库恢复演练；不能仅凭文件存在认定可恢复。此仓库没有自动备份任务。
 
-源码升级：先获取并切换到已确认的新版本，在维护窗口执行以下步骤。先构建，成功后再停止旧应用；迁移时不让旧 API/Worker 继续访问数据库。
+应用更新：先获取并切换到已确认的新版本，在维护窗口执行以下步骤。当前只支持空库初始化和相同表结构下的应用重启，没有旧库自动升级逻辑。开发阶段若表结构改变，需要先备份并重建可丢弃的测试库；正式部署后的升级另行设计。
 
 ~~~sh
 docker compose build
 docker compose stop api worker
 docker compose run --rm init
-# 仅在迁移成功后继续：
+# 仅在初始化/已有表检查成功后继续：
 docker compose up -d --no-build --wait
 ~~~
 
-每步都检查退出码；迁移失败时停止升级并检查 init 日志，不继续启动新应用。镜像升级对应地先修改 APP_VERSION 并执行 `docker compose pull`，再执行停应用、init 和 up。数据库迁移后的回退需确认旧版本兼容性，不能直接假设换回旧镜像即可回退。
+每步都检查退出码；init 失败时检查日志，不继续启动新应用。镜像更新对应地先修改 APP_VERSION 并执行 `docker compose pull`，再执行停应用、init 和 up。更改表结构后的应用回退需确认兼容性。
 
 ### 版本镜像与离线部署
 
@@ -147,11 +147,11 @@ HTTPS 部署可参考 [Caddy 配置](../deploy/Caddyfile.example)，并将 ANALY
 
 ## 域账号自动归属
 
-升级并执行 0002 迁移后，在组织设置配置允许域和工号规则。客户端须支持域身份上报；旧客户端仍需人工关联。具体协议、历史生效规则及验证边界见[域账号自动关联](domain-identity.md)。
+初始化后即默认自动关联：域账号按登录工号，本地及未报告身份的客户端按注册账号匹配或创建员工，无需域规则或开关。人工归属优先保留。具体协议、历史事件归属及验证边界见[账号自动关联](domain-identity.md)。
 
 ## 给 Windows Piora 分发配置
 
-1. 管理员创建部门/员工，生成有限次数、有限期限的 enrollment key。
+1. 管理员生成有限次数、有限期限的 enrollment key。员工在设备接入时自动创建，姓名和部门可后续补充。
 2. 企业配置工具写入每名用户的 %LOCALAPPDATA%\Piora\telemetry\config.json：
 
 ~~~json

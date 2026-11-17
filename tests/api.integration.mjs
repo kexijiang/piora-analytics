@@ -80,11 +80,11 @@ try {
   csrf = login.json().data.csrf_token;
   await call("GET", "/health/ready");
   await db.pool.query(
-    "DELETE FROM schema_migrations WHERE name='0001_initial.sql'",
+    "ALTER TABLE employee_domain_accounts RENAME TO readiness_test_missing",
   );
   await call("GET", "/health/ready", undefined, 503);
   await db.pool.query(
-    "INSERT INTO schema_migrations(name) VALUES('0001_initial.sql')",
+    "ALTER TABLE readiness_test_missing RENAME TO employee_domain_accounts",
   );
   const dept = (
     await call("POST", "/v1/admin/departments", { name: "研发部" }, 201)
