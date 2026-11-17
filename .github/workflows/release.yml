@@ -50,7 +50,7 @@ jobs:
           mkdir -p "$CONFIG_DIR" "$POSTGRES_DATA_DIR" "$EXPORT_DATA_DIR"
           node --input-type=module <<'NODE'
           import { writeFileSync } from 'node:fs';
-          const keys = ['IMAGE_NAME', 'APP_VERSION', 'POSTGRES_PASSWORD', 'ANALYTICS_PEPPER', 'ANALYTICS_ORIGIN', 'ALLOW_HTTP', 'INIT_ADMIN_PASSWORD', 'CONFIG_DIR', 'POSTGRES_DATA_DIR', 'EXPORT_DATA_DIR'];
+          const keys = ['IMAGE_NAME', 'APP_VERSION', 'POSTGRES_PASSWORD', 'ANALYTICS_PEPPER', 'ANALYTICS_ORIGIN', 'ALLOW_HTTP', 'INIT_ADMIN_PASSWORD', 'POSTGRES_DATA_DIR', 'EXPORT_DATA_DIR'];
           writeFileSync(`${process.env.CONFIG_DIR}/.env`, keys.map(key => `${key}=${process.env[key]}`).join('\n') + '\n', { mode: 0o600 });
           NODE
           sudo chown -R "1000:$(id -g)" "$CONFIG_DIR" "$EXPORT_DATA_DIR"
@@ -60,6 +60,11 @@ jobs:
           bash scripts/start.sh offline
           curl --fail http://127.0.0.1:4319/health/ready
           node scripts/smoke-compose.mjs
+          for service in api worker; do
+            container=$(docker compose --env-file "$CONFIG_DIR/.env" ps -q "$service")
+            test "$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/config"}}{{.RW}}{{end}}{{end}}' "$container")" = false
+            docker compose --env-file "$CONFIG_DIR/.env" exec -T "$service" node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; assert.throws(() => fs.writeFileSync("/config/.readonly-probe", "probe"), {code: "EROFS"});'
+          done
           docker compose --env-file "$CONFIG_DIR/.env" run --rm init
       - uses: docker/login-action@v3
         with:

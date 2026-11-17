@@ -60,7 +60,7 @@ sudo chmod 600 /data/piora/config/.env
 
 | 配置项 | 示例文件值 | 用途与填写要求 |
 |---|---|---|
-| `CONFIG_DIR` | `./config` | 宿主机配置目录，只读挂载到 `/config`。建议填写绝对路径，如 `/data/piora/config`，文件放在其中的 `.env`。启动脚本实际使用的目录见下文。 |
+| `CONFIG_DIR` | 不在 .env 中设置 | 仅通过脚本第二个参数或宿主机环境变量指定；默认 `./config`，只读挂载到 `/config`。 |
 | `POSTGRES_DATA_DIR` | 空，必填 | PostgreSQL 数据目录，如 `/data/piora/postgres`，读写挂载到 `/var/lib/postgresql`。选择实际大容量盘上的独立目录，无默认路径。 |
 | `EXPORT_DATA_DIR` | 空，必填 | 导出文件目录，如 `/data/piora/exports`，由 API 和 Worker 共享读写挂载到 `/exports`，无默认路径。 |
 | `POSTGRES_PASSWORD` | 空，必填 | 数据库密码，同时用于应用连接。使用 URL 安全的随机值，推荐 `openssl rand -hex 32`；初始化后不能仅修改此文件来更改数据库密码。 |
@@ -71,14 +71,13 @@ sudo chmod 600 /data/piora/config/.env
 | `APP_PORT` | `4319` | 宿主机访问端口，Compose 默认 4319；改动时同步修改 ANALYTICS_ORIGIN 和防火墙规则。 |
 | `IMAGE_NAME` | `piora-analytics` | 源码构建使用示例值；拉取发布镜像改为 `ghcr.io/kexijiang/piora-analytics`。 |
 | `APP_VERSION` | `latest` | 镜像标签，建议填写确定的已发布版本，如 `v0.1.2`；离线模式需与已加载镜像标签一致。 |
-| `INIT_ORG_NAME` | `Piora` | 首次初始化的组织名称，部署时填写公司或团队名称；已有库不会因修改此项而改名。 |
-| `INIT_ADMIN_USERNAME` | `admin` | 首次初始化的管理员账号；已有库不会因修改此项而更换账号。 |
+| `INIT_ORG_NAME` | `Piora` | 首次初始化的组织名称，Compose 缺省为 Piora，部署时填写公司或团队名称；已有库不会因修改此项而改名。 |
+| `INIT_ADMIN_USERNAME` | `admin` | 首次初始化的管理员账号，Compose 缺省为 admin；已有库不会因修改此项而更换账号。 |
 | `INIT_ADMIN_PASSWORD` | 空，首次必填 | 初始管理员密码，12–256 字符。首次登录强制修改，初始化完成后可从配置文件移除。 |
 
 使用上述目录及发布镜像时，至少将路径和镜像配置改为：
 
 ```dotenv
-CONFIG_DIR=/data/piora/config
 POSTGRES_DATA_DIR=/data/piora/postgres
 EXPORT_DATA_DIR=/data/piora/exports
 IMAGE_NAME=ghcr.io/kexijiang/piora-analytics
@@ -87,7 +86,7 @@ APP_VERSION=v0.1.2
 
 然后填写三个秘密、访问地址和组织信息。不要提交或分享真实 `.env`。`DATABASE_URL`、容器内部 `PORT`、`HOST`、`EXPORT_DIR` 等由 Compose 生成或固定，不需要另配。API、Worker 和 init 读取同一个只读挂载文件；数据库和导出文件分别写入上述宿主机目录。
 
-**配置目录的选择顺序：脚本第二个参数 → 宿主机环境变量 CONFIG_DIR → 部署目录下的 ./config。** 脚本会用选定目录同时读取配置和挂载容器；仅在 `.env` 内修改 CONFIG_DIR 不能让脚本自动找到搬迁后的文件。直接执行运维命令时，也要设置同一个 CONFIG_DIR。Windows 可用 `D:/piora/config` 等路径，并通过 Git Bash 执行脚本。
+**配置目录的选择顺序：脚本第二个参数 → 宿主机环境变量 CONFIG_DIR → 部署目录下的 ./config。** 脚本会用选定目录同时读取配置和挂载容器；不要在 `.env` 中设置 CONFIG_DIR，以免产生重复来源。直接执行运维命令时，也要设置同一个 CONFIG_DIR。Windows 可用 `D:/piora/config` 等路径，并通过 Git Bash 执行脚本。
 
 ### 启动与升级
 
@@ -135,6 +134,8 @@ docker compose --env-file "$CONFIG_DIR/.env" exec -T database pg_dump -U analyti
 ```
 
 确认退出码为 0，将备份复制到独立存储，同时安全备份配置；定期在隔离数据库演练恢复。宿主机绑定目录不会被 `down` 或 `down -v` 删除。旧命名卷数据不会自动迁入新目录，切换前需停写、备份并恢复；不要让两个项目同时访问同一个 PostgreSQL 目录。
+
+如采用物理目录复制，必须停止 PostgreSQL 并确保版本兼容，将旧卷根目录的完整内容复制到 POSTGRES_DATA_DIR，保留 PostgreSQL 18 的 `18/docker/` 层级（即 `<POSTGRES_DATA_DIR>/18/docker/PG_VERSION`），不要把其中的数据文件铺平到根目录。使用 pg_dump 逻辑备份恢复时不复制这些物理文件，应先初始化目标库再恢复。
 
 推送 `v*` tag 后，Release 工作流执行质量检查、镜像构建和隔离启动验证，再发布镜像及部署附件。当前 v0.1.2 镜像支持此配置读取方式，更新后的部署文件随下一次 Release 提供，也可从仓库获取。HTTPS 可参考 [Caddy 配置](../deploy/Caddyfile.example)，切换协议后需重新登录。
 

@@ -31,6 +31,8 @@ services:
     environment:
       DATABASE_URL: postgresql://analytics:${POSTGRES_PASSWORD}@database:5432/piora_analytics
       INIT_IF_EMPTY: "true"
+      INIT_ORG_NAME: ${INIT_ORG_NAME:-Piora}
+      INIT_ADMIN_USERNAME: ${INIT_ADMIN_USERNAME:-admin}
     depends_on:
       database:
         condition: service_healthy

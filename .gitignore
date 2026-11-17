@@ -13,4 +13,4 @@ coverage/
 !.env.docker.example
 
 # Host-mounted deployment configuration (may contain secrets).
-config/
+/config/
