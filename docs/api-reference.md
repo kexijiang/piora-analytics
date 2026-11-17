@@ -202,7 +202,7 @@
 
 ## GET /v1/admin/settings/identity
 
-域账号自动匹配规则。operationId: getIdentityPolicy；最低角色：admin。
+固定账号自动关联行为（兼容接口）。operationId: getIdentityPolicy；最低角色：admin。
 
 | 参数 | 位置 | 类型 | 必填 | 说明 |
 |---|---|---|---|---|
@@ -229,7 +229,7 @@
 
 ## PATCH /v1/admin/settings/identity
 
-修改域账号自动匹配规则。operationId: updateIdentityPolicy；最低角色：admin。
+兼容旧版保存请求；返回固定自动关联策略。operationId: updateIdentityPolicy；最低角色：admin。
 
 | 参数 | 位置 | 类型 | 必填 | 说明 |
 |---|---|---|---|---|
@@ -1620,7 +1620,7 @@
 ~~~json
 {
   "employee_id": "10000000-0000-4000-8000-000000000001",
-  "valid_from": "2026-11-13",
+  "valid_from": null,
   "valid_to": null,
   "reason": "示例值",
   "expected_revision": 0
@@ -1635,7 +1635,7 @@
     "id": "10000000-0000-4000-8000-000000000001",
     "installation_id": "10000000-0000-4000-8000-000000000001",
     "employee_id": "10000000-0000-4000-8000-000000000001",
-    "valid_from": "2026-11-13",
+    "valid_from": null,
     "valid_to": null,
     "reason": "示例值",
     "revision": 0
@@ -1664,7 +1664,7 @@
 ~~~json
 {
   "employee_id": "10000000-0000-4000-8000-000000000001",
-  "valid_from": "2026-11-13",
+  "valid_from": null,
   "valid_to": null,
   "reason": "示例值",
   "expected_revision": 0
@@ -1679,7 +1679,7 @@
     "id": "10000000-0000-4000-8000-000000000001",
     "installation_id": "10000000-0000-4000-8000-000000000001",
     "employee_id": "10000000-0000-4000-8000-000000000001",
-    "valid_from": "2026-11-13",
+    "valid_from": null,
     "valid_to": null,
     "reason": "示例值",
     "revision": 0
@@ -2359,9 +2359,9 @@
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 |---|---|---|---|---|
 | version | integer | true | {"minimum":0,"maximum":2147483647} | 版本 |
-| enabled | boolean | true | {} | 自动关联是否启用 |
-| auto_create | boolean | true | {} | 是否自动创建员工 |
-| rules | array<IdentityRule> | true | {"maxItems":20} | 允许的域及工号校验规则；同一组织内工号全局唯一 |
+| enabled | boolean | true | {} | 兼容字段，服务端固定为 true |
+| auto_create | boolean | true | {} | 兼容字段，服务端固定为 true |
+| rules | array<IdentityRule> | true | {"maxItems":20} | 兼容字段，服务端固定为空；所有域均按账号匹配工号 |
 
 ## IdentityPolicyUpdate
 
@@ -2378,7 +2378,7 @@
 | identity | WindowsIdentity / null | true | {} | 见引用对象 |
 | state | string | true | {"enum":["missing","local","unknown","disabled","domain_not_allowed","invalid_account","employee_missing","employee_archived","identity_conflict","binding_preserved","matched"]} | 匹配结果 |
 | employee_id | string / null | true | {} | 稳定 UUID，不能使用用户名代替 |
-| binding_source | string | true | {"enum":["none","manual","domain"]} | 当前绑定来源 |
+| binding_source | string | true | {"enum":["none","manual","domain","automatic"]} | 当前绑定来源 |
 
 ## IdentityUpdate
 
@@ -2457,7 +2457,7 @@
 | id | string | true | {"format":"uuid"} | 稳定 UUID，不能使用用户名代替 |
 | installation_id | string | true | {"format":"uuid"} | 稳定 UUID，不能使用用户名代替 |
 | employee_id | string | true | {"format":"uuid"} | 稳定 UUID，不能使用用户名代替 |
-| valid_from | string | true | {"format":"date"} | 包含 |
+| valid_from | string / null | true | {} | 包含；null 覆盖全部历史 |
 | valid_to | string / null | true | {} | 不包含；null 为持续 |
 | reason | string | true | {"minLength":1,"maxLength":500} | 绑定/纠错原因 |
 | revision | integer | true | {"minimum":0,"maximum":2147483647} | 版本 |
@@ -2467,7 +2467,7 @@
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 |---|---|---|---|---|
 | employee_id | string | true | {"format":"uuid"} | 稳定 UUID，不能使用用户名代替 |
-| valid_from | string | true | {"format":"date"} | 包含；北京时间自然日 |
+| valid_from | string / null | true | {} | 包含；北京时间自然日；null 覆盖全部历史 |
 | valid_to | string / null | true | {} | 不包含 |
 | reason | string | true | {"minLength":1,"maxLength":500} | 原因 |
 | expected_revision | integer | true | {"minimum":0,"maximum":2147483647} | 安装/原绑定版本 |

@@ -274,8 +274,8 @@ export async function adminOperation(c, id, b, q, p, ctx) {
   }
   if (id === "createBinding" || id === "correctBinding") {
     if (
-      (b.valid_to && b.valid_to <= b.valid_from) ||
-      Date.parse(b.valid_from) < Date.now() - 731 * 86400000
+      (b.valid_from && b.valid_to && b.valid_to <= b.valid_from) ||
+      (b.valid_from && Date.parse(b.valid_from) < Date.now() - 731 * 86400000)
     )
       throw new ApiError(422, "RANGE_OUT_OF_RETENTION");
     // Identity matching locks installation before employee; use the same order.

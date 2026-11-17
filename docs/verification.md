@@ -74,3 +74,10 @@ GitHub CI 状态以相应提交的 Actions 为准，本文件不预报未来结�
 本次内网改造本地验证：npm run check、npm run typecheck、npm test（9 项）、npm run build 和隔离 PostgreSQL 的 npm run test:api 全部通过；HTTP 生产显式启用、默认拒绝 HTTP、HTTPS Secure/__Host Cookie、HTTP 无 Secure 会话均纳入接口回归。Compose config 和 Release YAML 解析通过。首次类型检查/构建在 npm ci 尚未完成时失败，安装完成后重跑通过。后续 Docker 引擎修复后，容器冒烟通过；Release 发布未执行。
 
 本地 Docker 验收补充：2026-11-16，Docker Engine 29.6.2 / Docker Desktop Linux。Node 24 bookworm 镜像完成 npm ci 与 Vite 构建；独立 piora-compose-test 项目端口 14319，PostgreSQL 18 健康、init 退出 0、API 健康、Worker 运行且日志无错误。Edge 实际验证 HTTP 登录、首次改密、刷新会话保留，无 pageerror。浏览器脚本首次因未等待改密完成而过早刷新失败，修正等待弹窗关闭后从空库复测通过。保留卷 down/up 后仍只有 1 个组织、1 个管理员，修改后的密码可登录。镜像首次下载遇连接中断，重试下载完成后构建成功。没有验证真实设备采集、负载或 GitHub 镜像发布。
+
+
+2026-11-17 默认自动关联与历史回补：check、typecheck、9 项单元测试、build、test:api、test:database、test:identity 通过。隔离 PostgreSQL 从已有 0001/0002 数据升级到 0004，覆盖旧策略关闭、任意域、前导零、本地账号名缺失时读取注册用户名、旧客户端、历史统计自动归属、旧自动期间扩展、后台分批及并发重跑、人工期间不变、停用/冲突与租户隔离。合成历史统计回补前后总量不变。迁移首次检查因旧约束名称不匹配失败，修正为实际约束名后复测通过。上述数据库验收均为合成数据，不代表真实企业域账号采集。
+
+浏览器补充：Windows Edge 的 identity.spec.ts 与 real-api.spec.ts 两项通过，覆盖自动关联说明、取消配置控件、刷新后行为、员工历史明细、人工纠错、Cookie/CSRF 与组织管理。截图为合成测试数据。
+
+本地联调补充：同日已备份现有测试服务数据库并启动本地构建的 automatic-identity-preview 镜像（未发布新 tag）。0004 迁移与 worker 回补成功，已有个人电脑本地账号自动创建员工并绑定，未归属的历史汇总行数降为 0，健康检查通过。这是本地已有真实上报记录的归属验证，不是公司域账号部署验收。

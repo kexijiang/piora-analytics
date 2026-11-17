@@ -1,30 +1,19 @@
 import { ApiError, uuid, audit, one, digest, sameHash } from "./core.mjs";
+// Keep the old settings API readable by older dashboards, but behavior is fixed.
 export const defaultIdentityPolicy = {
   version: 0,
-  enabled: false,
-  auto_create: false,
+  enabled: true,
+  auto_create: true,
   rules: [],
 };
 export async function identityPolicy(c, org) {
-  return (
-    (
-      await c.query(
-        "SELECT value FROM org_settings WHERE org_id=$1 AND name='identity'",
-        [org],
-      )
-    ).rows[0]?.value ?? defaultIdentityPolicy
-  );
-}
-export function validateIdentityPolicy(policy) {
-  const domains = new Set();
-  for (const rule of policy.rules) {
-    const domain = rule.domain.trim().toUpperCase();
-    if (!/^[A-Z0-9][A-Z0-9._-]*$/.test(domain) || domains.has(domain))
-      throw new ApiError(422, "POLICY_INVALID", "域名无效或重复");
-    domains.add(domain);
-  }
-  if (policy.enabled && !policy.rules.length)
-    throw new ApiError(422, "POLICY_INVALID", "启用自动关联需要至少一个域规则");
+  const row = (
+    await c.query(
+      "SELECT value FROM org_settings WHERE org_id=$1 AND name='identity'",
+      [org],
+    )
+  ).rows[0];
+  return { ...defaultIdentityPolicy, version: row?.value.version ?? 0 };
 }
 export async function updateIdentityPolicy(c, b, ctx) {
   await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
@@ -36,14 +25,7 @@ export async function updateIdentityPolicy(c, b, ctx) {
     b.policy.version !== old.version + 1
   )
     throw new ApiError(409, "REVISION_CONFLICT");
-  validateIdentityPolicy(b.policy);
-  const policy = {
-    ...b.policy,
-    rules: b.policy.rules.map((r) => ({
-      ...r,
-      domain: r.domain.trim().toUpperCase(),
-    })),
-  };
+  const policy = { ...defaultIdentityPolicy, version: old.version + 1 };
   await c.query(
     "INSERT INTO org_settings(org_id,name,value,revision) VALUES($1,'identity',$2,$3) ON CONFLICT(org_id,name) DO UPDATE SET value=EXCLUDED.value,revision=EXCLUDED.revision,updated_at=now()",
     [ctx.org, policy, policy.version],
@@ -54,7 +36,7 @@ export async function updateIdentityPolicy(c, b, ctx) {
     "identity.policy.updated",
     "organization",
     ctx.org,
-    b.reason,
+    "账号自动关联为固定行为；兼容旧客户端保存请求",
   );
   return policy;
 }
@@ -87,9 +69,9 @@ export async function matchIdentity(c, claim, ctx) {
   await c.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
     ctx.org + ":domain-identity",
   ]);
-  await one(
+  const installation = await one(
     c,
-    "SELECT id FROM installations WHERE org_id=$1 AND id=$2 FOR UPDATE",
+    "SELECT * FROM installations WHERE org_id=$1 AND id=$2 FOR UPDATE",
     [ctx.org, ctx.installation],
   );
   const old = (
@@ -99,6 +81,10 @@ export async function matchIdentity(c, claim, ctx) {
     )
   ).rows[0];
   const finish = async (state) => {
+    await c.query(
+      "UPDATE installations SET identity_match_version=1 WHERE org_id=$1 AND id=$2",
+      [ctx.org, ctx.installation],
+    );
     if (
       !old ||
       !sameHash(digest(old.claim), digest(claim)) ||
@@ -106,7 +92,7 @@ export async function matchIdentity(c, claim, ctx) {
     ) {
       await c.query(
         "INSERT INTO installation_identities(org_id,installation_id,claim,state) VALUES($1,$2,$3,$4) ON CONFLICT(org_id,installation_id) DO UPDATE SET claim=EXCLUDED.claim,state=EXCLUDED.state,updated_at=now()",
-        [ctx.org, ctx.installation, claim, state],
+        [ctx.org, ctx.installation, JSON.stringify(claim), state],
       );
       await audit(
         c,
@@ -119,37 +105,43 @@ export async function matchIdentity(c, claim, ctx) {
     }
     return identityResult(c, ctx.org, ctx.installation);
   };
-  if (claim.account_type !== "domain") return finish(claim.account_type);
-  const policy = await identityPolicy(c, ctx.org);
-  if (!policy.enabled) return finish("disabled");
-  const domain = (claim.domain ?? "").trim().toUpperCase();
-  const rule = policy.rules.find((r) => r.domain === domain);
-  if (!rule) return finish("domain_not_allowed");
-  let account = claim.account_name ?? "";
+  if (installation.status === "revoked") return finish(old?.state ?? "missing");
+  // A domain identity must come from the explicit OS claim. Local/legacy clients
+  // may only have the registration username; never treat it as a verified domain.
+  if (claim?.account_type === "unknown") return finish("unknown");
+  const domainAccount = claim?.account_type === "domain";
+  const domain = domainAccount
+    ? (claim.domain ?? "").trim().toUpperCase()
+    : null;
+  const account = domainAccount
+    ? (claim.account_name ?? "")
+    : claim?.account_name || installation.windows_username;
   if (
-    claim.source !== "windows_logon" ||
-    !(rule.format === "digits" ? /^[0-9]+$/ : /^[A-Za-z0-9_-]+$/).test(account)
+    domainAccount &&
+    (claim.source !== "windows_logon" || !/^[A-Z0-9][A-Z0-9._-]*$/.test(domain))
   )
     return finish("invalid_account");
-  if (rule.case === "upper") account = account.toUpperCase();
-  if (rule.case === "lower") account = account.toLowerCase();
+  // Employee numbers are opaque strings: preserve leading zeroes and spelling.
+  if (!account || account.length > 64 || !/^[\p{L}\p{N}_.-]+$/u.test(account))
+    return finish("invalid_account");
   const employeeNo = account;
-  if (employeeNo.length > 64) return finish("invalid_account");
-  // Do not rewrite any existing/future/historical association automatically.
+  // Manual decisions always take priority, including historical and future periods.
   const bindings = (
     await c.query(
-      "SELECT employee_id,source FROM installation_bindings WHERE org_id=$1 AND installation_id=$2",
+      "SELECT id,employee_id,source,lower_inf(valid_days) AS all_history,upper_inf(valid_days) AS open_end FROM installation_bindings WHERE org_id=$1 AND installation_id=$2",
       [ctx.org, ctx.installation],
     )
   ).rows;
   if (bindings.some((b) => b.source === "manual"))
     return finish("binding_preserved");
-  const mapped = (
-    await c.query(
-      "SELECT e.* FROM employee_domain_accounts a JOIN employees e ON e.org_id=a.org_id AND e.id=a.employee_id WHERE a.org_id=$1 AND a.domain=$2 AND a.account_name=$3 FOR UPDATE OF e",
-      [ctx.org, domain, account],
-    )
-  ).rows[0];
+  const mapped = domainAccount
+    ? (
+        await c.query(
+          "SELECT e.* FROM employee_domain_accounts a JOIN employees e ON e.org_id=a.org_id AND e.id=a.employee_id WHERE a.org_id=$1 AND a.domain=$2 AND a.account_name=$3 FOR UPDATE OF e",
+          [ctx.org, domain, account],
+        )
+      ).rows[0]
+    : null;
   // Employee numbers are unique organization-wide, including across allowed domains.
   let employee = (
     await c.query(
@@ -165,7 +157,6 @@ export async function matchIdentity(c, claim, ctx) {
     return finish("identity_conflict");
   if (employee?.status === "archived") return finish("employee_archived");
   if (!employee) {
-    if (!policy.auto_create) return finish("employee_missing");
     employee = (
       await c.query(
         "INSERT INTO employees(id,org_id,name,employee_no) VALUES($1,$2,$3,$3) ON CONFLICT(org_id,employee_no) DO NOTHING RETURNING *",
@@ -179,17 +170,17 @@ export async function matchIdentity(c, claim, ctx) {
       "identity.employee.created",
       "employee",
       employee.id,
-      "根据组织域账号规则自动创建",
+      "根据上报账号自动创建",
     );
   }
-  if (!mapped)
+  if (domainAccount && !mapped)
     await c.query(
       "INSERT INTO employee_domain_accounts(org_id,domain,account_name,employee_id) VALUES($1,$2,$3,$4)",
       [ctx.org, domain, account, employee.id],
     );
   if (!bindings.length) {
     await c.query(
-      "INSERT INTO installation_bindings(id,org_id,installation_id,employee_id,valid_days,reason,source) VALUES($1,$2,$3,$4,daterange((now() AT TIME ZONE 'Asia/Shanghai')::date,NULL,'[)'),'域账号自动关联；从匹配当天生效','domain')",
+      "INSERT INTO installation_bindings(id,org_id,installation_id,employee_id,valid_days,reason,source) VALUES($1,$2,$3,$4,daterange(NULL,NULL,'[)'),'账号自动关联；包含历史统计','automatic')",
       [uuid(), ctx.org, ctx.installation, employee.id],
     );
     await c.query(
@@ -202,7 +193,29 @@ export async function matchIdentity(c, claim, ctx) {
       "identity.binding.created",
       "installation",
       ctx.installation,
-      "自动关联员工；不改写匹配日之前历史",
+      "自动关联员工；包含历史及后续补传的统计",
+    );
+  }
+  if (
+    bindings.length === 1 &&
+    bindings[0].open_end &&
+    !bindings[0].all_history
+  ) {
+    await c.query(
+      "UPDATE installation_bindings SET valid_days=daterange(NULL,NULL,'[)'),revision=revision+1,reason='自动关联回补历史统计' WHERE id=$1",
+      [bindings[0].id],
+    );
+    await c.query(
+      "UPDATE installations SET revision=revision+1 WHERE org_id=$1 AND id=$2",
+      [ctx.org, ctx.installation],
+    );
+    await audit(
+      c,
+      { ...ctx, account: { id: ctx.installation } },
+      "identity.binding.backfilled",
+      "installation",
+      ctx.installation,
+      "将已有自动归属扩展到历史统计；保留人工归属",
     );
   }
   return finish("matched");

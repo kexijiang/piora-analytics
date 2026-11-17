@@ -1,3 +1,5 @@
+import { reconcileIdentities } from "../apps/worker/src/identity.mjs";
+import { loadReport } from "../apps/api/src/reports.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
@@ -14,6 +16,49 @@ const upgradeOrg = uuid(),
   upgradeEmployee = uuid(),
   upgradeInstallation = uuid(),
   upgradeBinding = uuid();
+const historical = [
+  {
+    id: uuid(),
+    username: "domain-display",
+    employeeNo: "000987",
+    claim: {
+      account_type: "domain",
+      domain: "ANY-REGION",
+      account_name: "000987",
+      source: "windows_logon",
+    },
+  },
+  {
+    id: uuid(),
+    username: "local-history",
+    employeeNo: "local-history",
+    claim: {
+      account_type: "local",
+      domain: null,
+      account_name: null,
+      source: "windows_logon",
+    },
+  },
+  {
+    id: uuid(),
+    username: "legacy-history",
+    employeeNo: "legacy-history",
+    claim: null,
+  },
+  {
+    id: uuid(),
+    username: "old-auto",
+    employeeNo: "007",
+    claim: {
+      account_type: "domain",
+      domain: "CHINA",
+      account_name: "007",
+      source: "windows_logon",
+    },
+    auto: true,
+  },
+];
+const historyDay = dayOf(Date.now() - 10 * 86400000);
 const db = await testDatabase({
   beforeMigrate: async (pool) => {
     await pool.query(
@@ -59,8 +104,8 @@ const db = await testDatabase({
         upgradeOrg,
         {
           version: 1,
-          enabled: true,
-          auto_create: true,
+          enabled: false,
+          auto_create: false,
           rules: [
             {
               domain: "CHINA",
@@ -76,6 +121,26 @@ const db = await testDatabase({
       "INSERT INTO employee_domain_accounts(org_id,domain,account_name,employee_id) VALUES($1,'CHINA','007',$2)",
       [upgradeOrg, upgradeEmployee],
     );
+    for (const item of historical) {
+      await pool.query(
+        "INSERT INTO installations(id,org_id,registration_id,registration_hash,windows_username,device_label,app_version,sdk_version,capabilities) VALUES($1,$2,$3,$4,$5,'History fixture','old','old','{}')",
+        [item.id, upgradeOrg, uuid(), Buffer.from("synthetic"), item.username],
+      );
+      if (item.claim)
+        await pool.query(
+          "INSERT INTO installation_identities(org_id,installation_id,claim,state) VALUES($1,$2,$3,'disabled')",
+          [upgradeOrg, item.id, item.claim],
+        );
+      if (item.auto)
+        await pool.query(
+          "INSERT INTO installation_bindings(id,org_id,installation_id,employee_id,valid_days,reason,source) VALUES($1,$2,$3,$4,daterange(current_date,NULL,'[)'),'Old auto fixture','domain')",
+          [uuid(), upgradeOrg, item.id, upgradeEmployee],
+        );
+      await pool.query(
+        "INSERT INTO installation_daily_metrics(org_id,installation_id,day,source,app_version,queries,completed_queries,aggregated_at) VALUES($1,$2,$3,'chat','old',3,3,now())",
+        [upgradeOrg, item.id, historyDay],
+      );
+    }
   },
 });
 let app, app2;
@@ -89,13 +154,71 @@ try {
   assert.equal(upgraded.source, "manual");
   assert.equal(upgraded.employee_id, upgradeEmployee);
   assert.equal(upgraded.reason, "Existing manual decision");
+  // Upgrade backfills old claims and legacy usernames without a client reconnect.
+  const reportRange = { from: historyDay, to: dayOf(Date.now()) };
+  const beforeHistory = await loadReport(db.pool, upgradeOrg, reportRange);
+  assert.equal(beforeHistory.rows.filter((r) => !r.employee_id).length, 4);
+  assert.equal(
+    await reconcileIdentities(db.pool, 2),
+    2,
+    "bounded batches resume on the next pass",
+  );
+  await Promise.all([
+    reconcileIdentities(db.pool),
+    reconcileIdentities(db.pool),
+  ]);
+  assert.equal(
+    await reconcileIdentities(db.pool),
+    0,
+    "worker replay is idempotent",
+  );
+  const afterHistory = await loadReport(db.pool, upgradeOrg, reportRange);
+  assert.equal(afterHistory.rows.length, 4);
+  assert.equal(afterHistory.rows.filter((r) => !r.employee_id).length, 0);
+  assert.equal(
+    afterHistory.metrics.queries,
+    "12",
+    "history totals are unchanged",
+  );
+  for (const item of historical) {
+    const binding = (
+      await db.pool.query(
+        "SELECT e.employee_no,lower_inf(b.valid_days) AS all_history FROM installation_bindings b JOIN employees e ON e.org_id=b.org_id AND e.id=b.employee_id WHERE b.org_id=$1 AND b.installation_id=$2",
+        [upgradeOrg, item.id],
+      )
+    ).rows;
+    assert.equal(binding.length, 1);
+    assert.equal(binding[0].employee_no, item.employeeNo);
+    assert.equal(binding[0].all_history, true);
+  }
+  assert.deepEqual(
+    (
+      await db.pool.query("SELECT * FROM installation_bindings WHERE id=$1", [
+        upgradeBinding,
+      ])
+    ).rows[0],
+    upgraded,
+    "manual periods and revisions remain untouched",
+  );
+  assert.equal(
+    (
+      await db.pool.query(
+        "SELECT count(*)::int AS n FROM employees WHERE org_id=$1",
+        [upgradeOrg],
+      )
+    ).rows[0].n,
+    4,
+    "manual installation must not create an unused employee",
+  );
   const upgradedPolicy = (
     await db.pool.query(
       "SELECT value FROM org_settings WHERE org_id=$1 AND name='identity'",
       [upgradeOrg],
     )
   ).rows[0].value;
-  assert.equal("employee_prefix" in upgradedPolicy.rules[0], false);
+  assert.deepEqual(upgradedPolicy.rules, []);
+  assert.equal(upgradedPolicy.enabled, true);
+  assert.equal(upgradedPolicy.auto_create, true);
   await db.pool.query(
     "INSERT INTO employee_domain_accounts(org_id,domain,account_name,employee_id) VALUES($1,'OTHER','007',$2)",
     [upgradeOrg, upgradeEmployee],
@@ -158,26 +281,20 @@ try {
     );
     if (status === 200) policy = r.json().data;
   }
-  const rule = {
-    domain: "CHINA",
-    format: "digits",
-    case: "preserve",
-  };
-  await setPolicy(
-    {
-      ...policy,
-      enabled: true,
-      auto_create: true,
-      rules: [rule, { ...rule, domain: "china" }],
-    },
-    422,
-  );
+  const rule = { domain: "CHINA", format: "digits", case: "preserve" };
+  assert.equal(policy.enabled, true);
+  assert.equal(policy.auto_create, true);
+  assert.deepEqual(policy.rules, []);
+  // Legacy clients cannot switch off the fixed behavior or restrict it to one domain.
   await setPolicy({
     ...policy,
-    enabled: true,
-    auto_create: true,
-    rules: [rule, { ...rule, domain: "OTHER" }],
+    enabled: false,
+    auto_create: false,
+    rules: [rule],
   });
+  assert.equal(policy.enabled, true);
+  assert.equal(policy.auto_create, true);
+  assert.deepEqual(policy.rules, []);
   const enrollment = (
     await call(
       "POST",
@@ -238,7 +355,7 @@ try {
   ).rows[0];
   assert.equal(employee.employee_no, "001234");
   assert.equal((await get(a)).employee_id, employee.id);
-  assert.equal((await get(b)).identity_status.binding_source, "domain");
+  assert.equal((await get(b)).identity_status.binding_source, "automatic");
   assert.equal(
     (
       await db.pool.query(
@@ -276,9 +393,9 @@ try {
     "matched",
   );
   assert.equal((await get(b)).employee_id, employee.id);
-  const legacy = reg();
+  const legacy = { ...reg(), windows_username: "001234" };
   await register(legacy);
-  assert.equal((await get(legacy)).identity_status.state, "missing");
+  assert.equal((await get(legacy)).identity_status.state, "matched");
   assert.equal(
     (await report(legacy, identity())).json().data.employee_id,
     employee.id,
@@ -290,17 +407,19 @@ try {
     source: "windows_logon",
   });
   await register(local);
-  assert.equal((await get(local)).identity_status.state, "local");
+  assert.equal((await get(local)).identity_status.state, "matched");
   const foreign = reg(identity("001234", "UNCONFIGURED"));
   await register(foreign);
-  assert.equal(
-    (await get(foreign)).identity_status.state,
-    "domain_not_allowed",
-  );
-  const invalid = reg(identity("someone"));
+  assert.equal((await get(foreign)).identity_status.state, "matched");
+  const invalid = reg(identity("not an account"));
   await register(invalid);
   assert.equal((await get(invalid)).identity_status.state, "invalid_account");
-  const manual = reg();
+  const manual = reg({
+    account_type: "unknown",
+    domain: null,
+    account_name: null,
+    source: "unavailable",
+  });
   await register(manual);
   await call(
     "POST",
@@ -349,45 +468,31 @@ try {
   await db.pool.query("UPDATE employees SET status='active' WHERE id=$1", [
     employee.id,
   ]);
-  await setPolicy({ ...policy, auto_create: false });
   const missing = reg(identity("333333"));
   await register(missing);
-  assert.equal((await get(missing)).identity_status.state, "employee_missing");
-  const existing = uuid();
-  await db.pool.query(
-    "INSERT INTO employees(id,org_id,name,employee_no) VALUES($1,$2,'Existing','333333')",
-    [existing, org],
-  );
-  assert.equal(
-    (await report(missing, identity("333333"))).json().data.employee_id,
-    existing,
-  );
-  // Allowed domains use the same organization-wide employee number.
-  await setPolicy({
-    ...policy,
-    auto_create: true,
-    rules: [{ ...rule, domain: "OTHER" }],
-  });
-  const conflict = reg(identity("001234", "OTHER"));
-  await register(conflict); // Existing OTHER mapping remains stable.
-  assert.equal(
-    (await get(conflict)).employee_id,
-    (await get(other)).employee_id,
-  );
-  const cross = reg(identity("333333", "OTHER"));
+  assert.equal((await get(missing)).identity_status.state, "matched");
+  const existing = (await get(missing)).employee_id;
+  const cross = reg(identity("333333", "ANY-REGION"));
   await register(cross);
-  assert.equal((await get(cross)).identity_status.state, "matched");
   assert.equal((await get(cross)).employee_id, existing);
-  await setPolicy({ ...policy, enabled: false, rules: [rule] });
-  const disabled = reg(identity("004444"));
-  await register(disabled);
-  assert.equal((await get(disabled)).identity_status.state, "disabled");
-  await setPolicy({ ...policy, enabled: true });
-  await register(disabled); // Registration replay keeps its original decision.
-  assert.equal((await get(disabled)).identity_status.state, "disabled");
+  const localFallback = {
+    ...reg({
+      account_type: "local",
+      domain: null,
+      account_name: null,
+      source: "windows_logon",
+    }),
+    windows_username: "local-fixture",
+  };
+  await register(localFallback);
+  assert.equal((await get(localFallback)).identity_status.state, "matched");
   assert.equal(
-    (await report(disabled, identity("004444"))).json().data.state,
-    "matched",
+    (
+      await db.pool.query("SELECT employee_no FROM employees WHERE id=$1", [
+        (await get(localFallback)).employee_id,
+      ])
+    ).rows[0].employee_no,
+    "local-fixture",
   );
   const unknown = reg({
     account_type: "unknown",
@@ -397,26 +502,15 @@ try {
   });
   await register(unknown);
   assert.equal((await get(unknown)).identity_status.state, "unknown");
-  await setPolicy({
-    ...policy,
-    rules: [
-      { ...rule, domain: "china", format: "alphanumeric", case: "lower" },
-    ],
-  });
-  const mixedCase = reg(identity("AbC007", "china")),
-    lowerCase = reg(identity("abc007"));
-  await Promise.all([register(mixedCase), register(lowerCase)]);
-  assert.equal(
-    (await get(mixedCase)).employee_id,
-    (await get(lowerCase)).employee_id,
-  );
+  const mixedCase = reg(identity("AbC007", "china"));
+  await register(mixedCase);
   assert.equal(
     (
       await db.pool.query("SELECT employee_no FROM employees WHERE id=$1", [
         (await get(mixedCase)).employee_id,
       ])
     ).rows[0].employee_no,
-    "abc007",
+    "AbC007",
   );
   // Organization-scoped foreign keys and matching do not share employee identities.
   const org2 = uuid();
@@ -489,13 +583,13 @@ try {
   assert.equal(
     (
       await db.pool.query(
-        "SELECT count(*)::int AS n FROM installation_bindings WHERE source='domain' AND lower(valid_days)<>(now() AT TIME ZONE 'Asia/Shanghai')::date",
+        "SELECT count(*)::int AS n FROM installation_bindings WHERE source='automatic' AND NOT lower_inf(valid_days)",
       )
     ).rows[0].n,
     0,
   );
   console.log(
-    "Identity HTTP + disposable PostgreSQL passed: concurrent/replayed registration, existing/new employees, leading zeros, multiple domains, legacy identity update, local/unknown domains, invalid account, manual priority, archived employees, policy updates and tenant constraints.",
+    "Identity HTTP + disposable PostgreSQL passed: concurrent/replayed registration, existing/new employees, leading zeros, multiple domains, legacy identity update, local/legacy accounts, arbitrary domains, unknown/invalid identities, manual priority, archived employees, fixed policy compatibility and tenant constraints.",
   );
 } finally {
   if (app) await app.close();

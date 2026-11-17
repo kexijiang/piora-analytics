@@ -64,6 +64,7 @@ try {
         installation_id: uuid(),
         credential: { credential_id: uuid(), secret: "A".repeat(43) },
         windows_username: "fixture-user",
+        windows_identity: { account_type: "unknown", domain: null, account_name: null, source: "unavailable" },
         device_label: "UNBOUND-FIXTURE",
         app_version: "fixture",
         sdk_version: "fixture",

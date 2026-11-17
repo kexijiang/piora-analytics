@@ -868,18 +868,18 @@
         },
         "enabled": {
           "type": "boolean",
-          "description": "自动关联是否启用"
+          "description": "兼容字段，服务端固定为 true"
         },
         "auto_create": {
           "type": "boolean",
-          "description": "是否自动创建员工"
+          "description": "兼容字段，服务端固定为 true"
         },
         "rules": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/IdentityRule"
           },
-          "description": "允许的域及工号校验规则；同一组织内工号全局唯一",
+          "description": "兼容字段，服务端固定为空；所有域均按账号匹配工号",
           "maxItems": 20
         }
       },
@@ -964,7 +964,8 @@
           "enum": [
             "none",
             "manual",
-            "domain"
+            "domain",
+            "automatic"
           ],
           "description": "当前绑定来源"
         }
@@ -1303,9 +1304,16 @@
           "description": "稳定 UUID，不能使用用户名代替"
         },
         "valid_from": {
-          "type": "string",
-          "format": "date",
-          "description": "包含"
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date",
+              "description": "包含；null 覆盖全部历史"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "valid_to": {
           "anyOf": [
@@ -1352,9 +1360,16 @@
           "description": "稳定 UUID，不能使用用户名代替"
         },
         "valid_from": {
-          "type": "string",
-          "format": "date",
-          "description": "包含；北京时间自然日"
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date",
+              "description": "包含；北京时间自然日；null 覆盖全部历史"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "valid_to": {
           "anyOf": [
