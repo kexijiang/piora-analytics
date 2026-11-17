@@ -11,3 +11,6 @@ playwright-report/
 *.log
 coverage/
 !.env.docker.example
+
+# Host-mounted deployment configuration (may contain secrets).
+config/

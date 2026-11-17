@@ -60,3 +60,5 @@ npm run test:ui
 PostgreSQL 集成检查只允许对名称以 _test 结尾的空数据库执行。未设置 DATABASE_URL 时，本地自动启动独立 PostgreSQL 18 测试实例；设置后要求目标为空。每个测试入口使用不同的空库。CI 使用独立 PostgreSQL 18 服务。生成器是契约及数据库字段的维护入口，CI 检查生成后是否漂移。
 
 此仓库为私有内部服务仓库。所有示例姓名、账号、设备、Token 和截图均为合成数据。没有生产密钥或真实员工数据。
+
+宿主机配置目录挂载：使用 `compose.config.yaml` 和 `--env-file <配置目录>/.env`，见[配置目录挂载说明](docs/deployment.md#将宿主机配置目录挂载到容器)。

@@ -86,3 +86,5 @@ GitHub CI 状态以相应提交的 Actions 为准，本文件不预报未来结�
 2026-11-17 初始化简化说明：此前的 0001–0004 升级与后台回补记录属于历史版本；当前代码已删除该迁移链和扫描任务，改为单份 schema.sql 初始化。历史数据归属通过注册/身份补报产生的绑定与正常事件补传处理，验证不再依赖旧库升级夹具。
 
 本次简化复测：check、typecheck、9 项单元测试、build、test:database、test:api、test:identity 及两项 Edge 浏览器测试通过。数据库检查覆盖空库初始化、重复初始化保留数据、不完整结构拒绝自动修改，以及真实 HTTP 历史事件补传后的员工归属。独立 Docker Compose 空库启动与重复 init 通过，只有一个组织和管理员，无 schema_migrations 表；临时容器及测试卷已清理。现有本地测试库在备份后清空使用统计，保留登录、员工和设备凭证，新版服务健康。此次 Compose 空库使用合成配置，不是内网正式部署。
+
+2026-11-17 配置目录挂载验证：check、typecheck、9 项单元测试、build 通过。独立 Compose 项目使用远端 v0.1.2 镜像与合成配置，从空卷完成初始化、健康检查；init/API/worker 使用宿主机配置目录，API 挂载确认 RW=false，写入探针返回 EROFS。修改宿主机 ANALYTICS_ORIGIN 并重建 API 后，使用新 Origin 登录返回 200。测试目录含空格，覆盖 Windows Docker Desktop 路径。测试容器与卷已清理；未进行企业内网部署验收。

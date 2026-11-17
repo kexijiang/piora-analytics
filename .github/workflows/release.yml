@@ -76,4 +76,5 @@ jobs:
             piora-analytics-*-linux-amd64.tar
             SHA256SUMS
             compose.yaml
+            compose.config.yaml
             .env.docker.example
