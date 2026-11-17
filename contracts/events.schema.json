@@ -964,7 +964,6 @@
           "enum": [
             "none",
             "manual",
-            "domain",
             "automatic"
           ],
           "description": "当前绑定来源"

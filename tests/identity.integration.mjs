@@ -1,228 +1,20 @@
-import { reconcileIdentities } from "../apps/worker/src/identity.mjs";
+import { runAggregation } from "../apps/worker/src/aggregate.mjs";
 import { loadReport } from "../apps/api/src/reports.mjs";
 import assert from "node:assert/strict";
-import fs from "node:fs";
 import {
   uuid,
   transaction,
   secretHash,
-  migrate,
+  initializeDatabase,
 } from "../apps/api/src/core.mjs";
 import { passwordHash } from "../apps/api/src/auth.mjs";
 import { createServer } from "../apps/api/src/server.mjs";
 import { testDatabase } from "./support/postgres.mjs";
 import { dayOf } from "../packages/contracts/telemetry.mjs";
-const upgradeOrg = uuid(),
-  upgradeEmployee = uuid(),
-  upgradeInstallation = uuid(),
-  upgradeBinding = uuid();
-const historical = [
-  {
-    id: uuid(),
-    username: "domain-display",
-    employeeNo: "000987",
-    claim: {
-      account_type: "domain",
-      domain: "ANY-REGION",
-      account_name: "000987",
-      source: "windows_logon",
-    },
-  },
-  {
-    id: uuid(),
-    username: "local-history",
-    employeeNo: "local-history",
-    claim: {
-      account_type: "local",
-      domain: null,
-      account_name: null,
-      source: "windows_logon",
-    },
-  },
-  {
-    id: uuid(),
-    username: "legacy-history",
-    employeeNo: "legacy-history",
-    claim: null,
-  },
-  {
-    id: uuid(),
-    username: "old-auto",
-    employeeNo: "007",
-    claim: {
-      account_type: "domain",
-      domain: "CHINA",
-      account_name: "007",
-      source: "windows_logon",
-    },
-    auto: true,
-  },
-];
-const historyDay = dayOf(Date.now() - 10 * 86400000);
-const db = await testDatabase({
-  beforeMigrate: async (pool) => {
-    await pool.query(
-      fs.readFileSync(
-        new URL("../database/migrations/0001_initial.sql", import.meta.url),
-        "utf8",
-      ),
-    );
-    await pool.query(
-      "CREATE TABLE schema_migrations(name text PRIMARY KEY,applied_at timestamptz NOT NULL DEFAULT now()); INSERT INTO schema_migrations(name) VALUES('0001_initial.sql')",
-    );
-    await pool.query(
-      "INSERT INTO organizations(id,name) VALUES($1,'Upgrade fixture')",
-      [upgradeOrg],
-    );
-    await pool.query(
-      "INSERT INTO employees(id,org_id,name,employee_no) VALUES($1,$2,'Existing fixture','007')",
-      [upgradeEmployee, upgradeOrg],
-    );
-    await pool.query(
-      "INSERT INTO installations(id,org_id,registration_id,registration_hash,windows_username,device_label,app_version,sdk_version,capabilities) VALUES($1,$2,$3,$4,'fixture','fixture','old','old','{}')",
-      [upgradeInstallation, upgradeOrg, uuid(), Buffer.from("synthetic")],
-    );
-    await pool.query(
-      "INSERT INTO installation_bindings(id,org_id,installation_id,employee_id,valid_days,reason) VALUES($1,$2,$3,$4,daterange(current_date-1,NULL,'[)'),'Existing manual decision')",
-      [upgradeBinding, upgradeOrg, upgradeInstallation, upgradeEmployee],
-    );
-    await pool.query(
-      fs.readFileSync(
-        new URL(
-          "../database/migrations/0002_domain_identity.sql",
-          import.meta.url,
-        ),
-        "utf8",
-      ),
-    );
-    await pool.query(
-      "INSERT INTO schema_migrations(name) VALUES('0002_domain_identity.sql')",
-    );
-    await pool.query(
-      "INSERT INTO org_settings(org_id,name,value) VALUES($1,'identity',$2)",
-      [
-        upgradeOrg,
-        {
-          version: 1,
-          enabled: false,
-          auto_create: false,
-          rules: [
-            {
-              domain: "CHINA",
-              employee_prefix: "OLD-",
-              format: "digits",
-              case: "preserve",
-            },
-          ],
-        },
-      ],
-    );
-    await pool.query(
-      "INSERT INTO employee_domain_accounts(org_id,domain,account_name,employee_id) VALUES($1,'CHINA','007',$2)",
-      [upgradeOrg, upgradeEmployee],
-    );
-    for (const item of historical) {
-      await pool.query(
-        "INSERT INTO installations(id,org_id,registration_id,registration_hash,windows_username,device_label,app_version,sdk_version,capabilities) VALUES($1,$2,$3,$4,$5,'History fixture','old','old','{}')",
-        [item.id, upgradeOrg, uuid(), Buffer.from("synthetic"), item.username],
-      );
-      if (item.claim)
-        await pool.query(
-          "INSERT INTO installation_identities(org_id,installation_id,claim,state) VALUES($1,$2,$3,'disabled')",
-          [upgradeOrg, item.id, item.claim],
-        );
-      if (item.auto)
-        await pool.query(
-          "INSERT INTO installation_bindings(id,org_id,installation_id,employee_id,valid_days,reason,source) VALUES($1,$2,$3,$4,daterange(current_date,NULL,'[)'),'Old auto fixture','domain')",
-          [uuid(), upgradeOrg, item.id, upgradeEmployee],
-        );
-      await pool.query(
-        "INSERT INTO installation_daily_metrics(org_id,installation_id,day,source,app_version,queries,completed_queries,aggregated_at) VALUES($1,$2,$3,'chat','old',3,3,now())",
-        [upgradeOrg, item.id, historyDay],
-      );
-    }
-  },
-});
+const db = await testDatabase();
 let app, app2;
 try {
-  await migrate(db.pool); // Re-running the upgrade must be harmless.
-  const upgraded = (
-    await db.pool.query("SELECT * FROM installation_bindings WHERE id=$1", [
-      upgradeBinding,
-    ])
-  ).rows[0];
-  assert.equal(upgraded.source, "manual");
-  assert.equal(upgraded.employee_id, upgradeEmployee);
-  assert.equal(upgraded.reason, "Existing manual decision");
-  // Upgrade backfills old claims and legacy usernames without a client reconnect.
-  const reportRange = { from: historyDay, to: dayOf(Date.now()) };
-  const beforeHistory = await loadReport(db.pool, upgradeOrg, reportRange);
-  assert.equal(beforeHistory.rows.filter((r) => !r.employee_id).length, 4);
-  assert.equal(
-    await reconcileIdentities(db.pool, 2),
-    2,
-    "bounded batches resume on the next pass",
-  );
-  await Promise.all([
-    reconcileIdentities(db.pool),
-    reconcileIdentities(db.pool),
-  ]);
-  assert.equal(
-    await reconcileIdentities(db.pool),
-    0,
-    "worker replay is idempotent",
-  );
-  const afterHistory = await loadReport(db.pool, upgradeOrg, reportRange);
-  assert.equal(afterHistory.rows.length, 4);
-  assert.equal(afterHistory.rows.filter((r) => !r.employee_id).length, 0);
-  assert.equal(
-    afterHistory.metrics.queries,
-    "12",
-    "history totals are unchanged",
-  );
-  for (const item of historical) {
-    const binding = (
-      await db.pool.query(
-        "SELECT e.employee_no,lower_inf(b.valid_days) AS all_history FROM installation_bindings b JOIN employees e ON e.org_id=b.org_id AND e.id=b.employee_id WHERE b.org_id=$1 AND b.installation_id=$2",
-        [upgradeOrg, item.id],
-      )
-    ).rows;
-    assert.equal(binding.length, 1);
-    assert.equal(binding[0].employee_no, item.employeeNo);
-    assert.equal(binding[0].all_history, true);
-  }
-  assert.deepEqual(
-    (
-      await db.pool.query("SELECT * FROM installation_bindings WHERE id=$1", [
-        upgradeBinding,
-      ])
-    ).rows[0],
-    upgraded,
-    "manual periods and revisions remain untouched",
-  );
-  assert.equal(
-    (
-      await db.pool.query(
-        "SELECT count(*)::int AS n FROM employees WHERE org_id=$1",
-        [upgradeOrg],
-      )
-    ).rows[0].n,
-    4,
-    "manual installation must not create an unused employee",
-  );
-  const upgradedPolicy = (
-    await db.pool.query(
-      "SELECT value FROM org_settings WHERE org_id=$1 AND name='identity'",
-      [upgradeOrg],
-    )
-  ).rows[0].value;
-  assert.deepEqual(upgradedPolicy.rules, []);
-  assert.equal(upgradedPolicy.enabled, true);
-  assert.equal(upgradedPolicy.auto_create, true);
-  await db.pool.query(
-    "INSERT INTO employee_domain_accounts(org_id,domain,account_name,employee_id) VALUES($1,'OTHER','007',$2)",
-    [upgradeOrg, upgradeEmployee],
-  );
+  await initializeDatabase(db.pool); // Repeated setup leaves initialized data alone.
   const org = uuid(),
     admin = uuid(),
     origin = "http://127.0.0.1:14991";
@@ -393,6 +185,46 @@ try {
     "matched",
   );
   assert.equal((await get(b)).employee_id, employee.id);
+  // Late upload is a normal data path, not a database-upgrade backfill job.
+  const historyDay = dayOf(Date.now() - 10 * 86400000);
+  await call(
+    "POST",
+    "/v1/telemetry/batches",
+    {
+      batch_id: uuid(),
+      protocol_version: "1.0",
+      client_sent_at: new Date().toISOString(),
+      policy_version: 1,
+      events: [
+        {
+          event_id: uuid(),
+          event_seq: "1",
+          source_key: "fixture:historical-launch",
+          event_type: "desktop.started",
+          occurred_at: historyDay + "T01:00:00+08:00",
+          app_launch_id: uuid(),
+          app_version: "test",
+          payload: { reason: "manual" },
+        },
+      ],
+    },
+    200,
+    {
+      authorization:
+        "Bearer pa1." +
+        other.credential.credential_id +
+        "." +
+        other.credential.secret,
+    },
+  );
+  await runAggregation(db.pool, 50);
+  const historical = await loadReport(db.pool, org, {
+    from: historyDay,
+    to: dayOf(Date.now()),
+  });
+  assert.equal(historical.rows.length, 1);
+  assert.equal(historical.rows[0].employee_id, employee.id);
+  assert.equal(historical.rows[0].metrics.launches, "1");
   const legacy = { ...reg(), windows_username: "001234" };
   await register(legacy);
   assert.equal((await get(legacy)).identity_status.state, "matched");

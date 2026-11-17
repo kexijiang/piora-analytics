@@ -1,6 +1,6 @@
 import {
   createPool,
-  migrate,
+  initializeDatabase,
   uuid,
   transaction,
 } from "../apps/api/src/core.mjs";
@@ -8,10 +8,10 @@ import { passwordHash } from "../apps/api/src/auth.mjs";
 import { defaultPolicy } from "../packages/contracts/telemetry.mjs";
 import readline from "node:readline/promises";
 const pool = createPool(process.env.DATABASE_URL);
-await migrate(pool);
+await initializeDatabase(pool);
 if (process.env.INIT_IF_EMPTY === "true" && (await pool.query("SELECT 1 FROM organizations")).rowCount) {
   await pool.end();
-  console.log("Database migrated; existing organization preserved.");
+  console.log("Database initialized; existing organization preserved.");
   process.exit(0);
 }
 const cli = readline.createInterface({

@@ -1,6 +1,6 @@
 # 数据库字段字典（自动生成）
 
-PostgreSQL 18；UTC timestamptz，统计日固定 Asia/Shanghai。初始化 SQL：[0001_initial.sql](../database/migrations/0001_initial.sql)。所有计数在 API 中为十进制字符串；NULL 不能转换为零。跨表关系、重算、保留与事务见 [数据库行为](database-design.md)。
+PostgreSQL 18；UTC timestamptz，统计日固定 Asia/Shanghai。初始化 SQL：[schema.sql](../database/schema.sql)。所有计数在 API 中为十进制字符串；NULL 不能转换为零。跨表关系、重算、保留与事务见 [数据库行为](database-design.md)。
 
 ## organizations
 
@@ -97,7 +97,6 @@ Windows 安装实例，用户名仅供匹配。
 | last_event_at | timestamptz | 可空 | 最近可信发生时间 |
 | reported_queue_events | bigint | NOT NULL DEFAULT 0 CHECK (reported_queue_events >= 0) | 上次报告积压 |
 | revision | integer | NOT NULL DEFAULT 1 CHECK (revision > 0) | 乐观锁版本 |
-| identity_match_version | integer | NOT NULL DEFAULT 0 | 自动账号关联处理版本；0 为等待后台回补 |
 
 表约束：
 
@@ -118,7 +117,7 @@ Windows 安装实例，用户名仅供匹配。
 | reason | varchar(500) | NOT NULL | 绑定/纠错原因 |
 | revision | integer | NOT NULL DEFAULT 1 CHECK (revision > 0) | 乐观锁版本 |
 | created_at | timestamptz | NOT NULL DEFAULT now() | 创建时间 |
-| source | text | NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','domain','automatic')) | manual 人工优先；domain 旧版域关联；automatic 自动账号关联 |
+| source | text | NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','automatic')) | manual 人工优先；automatic 自动关联 |
 
 表约束：
 
@@ -671,13 +670,13 @@ Windows 安装实例，用户名仅供匹配。
 
 ## installation_identities
 
-客户端域身份及最近匹配结果，不代表企业认证。
+客户端身份及最近匹配结果，不代表企业认证。
 
 | 字段 | PostgreSQL 类型 | SQL 约束/默认值 | 说明 |
 |---|---|---|---|
 | org_id | uuid | NOT NULL REFERENCES organizations(id) | 组织隔离键 |
 | installation_id | uuid | NOT NULL | 安装 |
-| claim | jsonb | NOT NULL | 最近报告的身份；JSON null 表示旧客户端仅报告注册用户名 |
+| claim | jsonb | NOT NULL | 最近报告的身份；JSON null 表示仅报告注册用户名 |
 | state | varchar(40) | NOT NULL | 最近匹配结果 |
 | updated_at | timestamptz | NOT NULL DEFAULT now() | 最近变化 |
 
@@ -688,7 +687,7 @@ Windows 安装实例，用户名仅供匹配。
 
 ## employee_domain_accounts
 
-已报告域账号的归属记录；多个允许域的同一工号归到同一员工。
+已报告域账号的归属记录；跨域同工号归到同一员工。
 
 | 字段 | PostgreSQL 类型 | SQL 约束/默认值 | 说明 |
 |---|---|---|---|

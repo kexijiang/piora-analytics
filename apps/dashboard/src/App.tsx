@@ -1541,7 +1541,7 @@ export default function App() {
                                 </Badge>
                                 <div className="muted">
                                   {identityLabel(i.identity_status?.state)}
-                                  {["domain", "automatic"].includes(
+                                  {["automatic"].includes(
                                     i.identity_status?.binding_source ?? "",
                                   )
                                     ? " · 自动关联"

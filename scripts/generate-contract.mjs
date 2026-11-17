@@ -43,7 +43,7 @@ add('WindowsIdentity',{account_type:en(['domain','local','unknown'],'客户端�
 add('IdentityRule',{domain:str('允许的域，大小写不敏感',128),format:en(['digits','alphanumeric'],'工号格式，保留前导零'),case:en(['preserve','upper','lower'],'登录名大小写归一化')});
 add('IdentityPolicy',{version:integer('版本'),enabled:flag('兼容字段，服务端固定为 true'),auto_create:flag('兼容字段，服务端固定为 true'),rules:list(ref('IdentityRule'),'兼容字段，服务端固定为空；所有域均按账号匹配工号',20)});
 add('IdentityPolicyUpdate',{policy:ref('IdentityPolicy'),expected_revision:integer('当前版本'),reason:str('修改原因',500)});
-add('IdentityResult',{identity:nil(ref('WindowsIdentity')),state:en(['missing','local','unknown','disabled','domain_not_allowed','invalid_account','employee_missing','employee_archived','identity_conflict','binding_preserved','matched'],'匹配结果'),employee_id:nil(id),binding_source:en(['none','manual','domain','automatic'],'当前绑定来源')});
+add('IdentityResult',{identity:nil(ref('WindowsIdentity')),state:en(['missing','local','unknown','disabled','domain_not_allowed','invalid_account','employee_missing','employee_archived','identity_conflict','binding_preserved','matched'],'匹配结果'),employee_id:nil(id),binding_source:en(['none','manual','automatic'],'当前绑定来源')});
 add('IdentityUpdate',{identity:ref('WindowsIdentity')});
 add('ServerCapabilities',{capabilities:list(en(['windows-domain-identity-v1'],'服务端能力'),'能力列表',10)});
 add('RegisterInput',{registration_id:id,installation_id:id,credential:ref('CredentialMaterial'),windows_username:str('当前系统账号；不是员工 ID',128),device_label:str('设备显示名',128),app_version:str('Piora 版本',64),sdk_version:str('Pi SDK 版本',64),protocol_version:en(['1.0'],'协议版本'),capabilities:list(en(['desktop_activity','query','model_usage','file_write','file_edit'],'采集能力'),'客户端能力',20),windows_identity:ref('WindowsIdentity')},['windows_identity']);
@@ -176,7 +176,7 @@ route('post','/v1/admin/exports','createExport','创建导出任务','ExportInpu
 route('get','/v1/admin/exports/{id}','getExport','导出状态',null,'ExportJob');
 route('get','/v1/admin/exports/{id}/download','downloadExport','下载 CSV',null,'csv');
 route('get','/health/live','liveness','进程存活',null,'ServiceHealth','public');
-route('get','/health/ready','readiness','数据库与迁移就绪',null,'ServiceHealth','public');
+route('get','/health/ready','readiness','数据库初始化就绪',null,'ServiceHealth','public');
 
 // 读操作不都属于 viewer；配置、账号、注册凭证、审计仅管理员可读。
 for (const r of routes) {

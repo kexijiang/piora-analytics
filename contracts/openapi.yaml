@@ -6840,7 +6840,7 @@ paths:
   /health/ready:
     get:
       operationId: readiness
-      summary: 数据库与迁移就绪
+      summary: 数据库初始化就绪
       tags:
         - ready
       parameters: []
@@ -7640,7 +7640,6 @@ components:
           enum:
             - none
             - manual
-            - domain
             - automatic
           description: 当前绑定来源
       required:

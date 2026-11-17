@@ -7,10 +7,9 @@ import Ajv from "ajv/dist/2020.js";
 import formats from "ajv-formats";
 import { canonicalize } from "json-canonicalize";
 export const root = path.resolve(import.meta.dirname, "../../..");
-export const migrationNames = fs
-  .readdirSync(path.join(root, "database/migrations"))
-  .filter((name) => name.endsWith(".sql"))
-  .sort();
+const schemaTables = JSON.parse(
+  fs.readFileSync(path.join(root, "database/manifest.json"), "utf8"),
+).tables.map((table) => table.name);
 export const spec = YAML.parse(
   fs.readFileSync(path.join(root, "contracts/openapi.yaml"), "utf8"),
 );
@@ -85,25 +84,29 @@ export function createPool(url) {
     statement_timeout: 15000,
   });
 }
-export async function migrate(pool) {
+export async function databaseReady(c) {
+  const result = await c.query(
+    "SELECT bool_and(to_regclass('public.' || name) IS NOT NULL) AS ready FROM unnest($1::text[]) AS name",
+    [schemaTables],
+  );
+  return result.rows[0].ready === true;
+}
+export async function initializeDatabase(pool) {
   await transaction(pool, async (c) => {
     await c.query("SELECT pg_advisory_xact_lock(71203001)");
-    await c.query(
-      "CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())",
+    if (await databaseReady(c)) return;
+    const existing = await c.query(
+      "SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') LIMIT 1",
     );
-    for (const name of migrationNames) {
-      if (
-        (await c.query("SELECT 1 FROM schema_migrations WHERE name=$1", [name]))
-          .rowCount
-      )
-        continue;
-      const sql = fs
-        .readFileSync(path.join(root, "database/migrations", name), "utf8")
-        .replace(/^BEGIN;\s*$/gm, "")
-        .replace(/^COMMIT;\s*$/gm, "");
-      await c.query(sql);
-      await c.query("INSERT INTO schema_migrations(name) VALUES($1)", [name]);
-    }
+    if (existing.rowCount)
+      throw new Error(
+        "Database is not an empty or initialized schema; reset the disposable database before setup. Automatic upgrades are not supported.",
+      );
+    const sql = fs
+      .readFileSync(path.join(root, "database/schema.sql"), "utf8")
+      .replace(/^BEGIN;\s*$/gm, "")
+      .replace(/^COMMIT;\s*$/gm, "");
+    await c.query(sql);
   });
 }
 export async function one(c, sql, args = [], status = 404) {

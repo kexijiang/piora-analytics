@@ -121,9 +121,10 @@ CREATE TABLE installation_bindings (
   reason varchar(500) NOT NULL,
   revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
   created_at timestamptz NOT NULL DEFAULT now(),
+  source text NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','automatic')),
   FOREIGN KEY (org_id, installation_id) REFERENCES installations(org_id, id),
   FOREIGN KEY (org_id, employee_id) REFERENCES employees(org_id, id),
-  CHECK (NOT isempty(valid_days) AND lower(valid_days) IS NOT NULL AND lower_inc(valid_days) AND NOT upper_inc(valid_days)),
+  CHECK (NOT isempty(valid_days) AND (lower_inf(valid_days) OR lower_inc(valid_days)) AND NOT upper_inc(valid_days)),
   EXCLUDE USING gist (org_id WITH =, installation_id WITH =, valid_days WITH &&)
 ) ;
 COMMENT ON TABLE installation_bindings IS '一台安装实例在任一天最多归属一个员工';
@@ -135,6 +136,7 @@ COMMENT ON COLUMN installation_bindings.valid_days IS '按北京时间日期归�
 COMMENT ON COLUMN installation_bindings.reason IS '绑定/纠错原因';
 COMMENT ON COLUMN installation_bindings.revision IS '乐观锁版本';
 COMMENT ON COLUMN installation_bindings.created_at IS '创建时间';
+COMMENT ON COLUMN installation_bindings.source IS 'manual 人工优先；automatic 自动关联';
 
 CREATE TABLE admin_accounts (
   id uuid PRIMARY KEY,
@@ -261,7 +263,7 @@ COMMENT ON COLUMN idempotency_keys.expires_at IS '清理时间';
 
 CREATE TABLE org_settings (
   org_id uuid NOT NULL REFERENCES organizations(id),
-  name text NOT NULL CHECK (name IN ('sync','retention')),
+  name text NOT NULL CHECK (name IN ('sync','retention','identity')),
   value jsonb NOT NULL,
   revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
   updated_at timestamptz NOT NULL DEFAULT now(),
@@ -269,7 +271,7 @@ CREATE TABLE org_settings (
 ) ;
 COMMENT ON TABLE org_settings IS '版本化同步与保留策略';
 COMMENT ON COLUMN org_settings.org_id IS '组织隔离键';
-COMMENT ON COLUMN org_settings.name IS 'sync / retention';
+COMMENT ON COLUMN org_settings.name IS 'sync / retention / identity';
 COMMENT ON COLUMN org_settings.value IS '按对应 OpenAPI 模型验证';
 COMMENT ON COLUMN org_settings.revision IS '乐观锁版本';
 COMMENT ON COLUMN org_settings.updated_at IS '修改时间';
@@ -784,7 +786,7 @@ CREATE TABLE audit_logs (
 COMMENT ON TABLE audit_logs IS '管理操作审计，无密码、原始设备凭证';
 COMMENT ON COLUMN audit_logs.id IS '业务 UUID';
 COMMENT ON COLUMN audit_logs.org_id IS '组织隔离键';
-COMMENT ON COLUMN audit_logs.actor_id IS '操作者；系统任务使用固定系统主体 UUID';
+COMMENT ON COLUMN audit_logs.actor_id IS '操作者；identity.* 动作为设备安装 UUID，管理动作为后台账号';
 COMMENT ON COLUMN audit_logs.action IS '动作';
 COMMENT ON COLUMN audit_logs.target_type IS '对象类型';
 COMMENT ON COLUMN audit_logs.target_id IS '对象';
@@ -793,6 +795,38 @@ COMMENT ON COLUMN audit_logs.before_redacted IS '脱敏前值';
 COMMENT ON COLUMN audit_logs.after_redacted IS '脱敏后值';
 COMMENT ON COLUMN audit_logs.request_id IS '请求追踪';
 COMMENT ON COLUMN audit_logs.occurred_at IS '发生时间';
+
+CREATE TABLE installation_identities (
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  installation_id uuid NOT NULL,
+  claim jsonb NOT NULL,
+  state varchar(40) NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (org_id,installation_id),
+  FOREIGN KEY (org_id, installation_id) REFERENCES installations(org_id, id)
+) ;
+COMMENT ON TABLE installation_identities IS '客户端身份及最近匹配结果，不代表企业认证';
+COMMENT ON COLUMN installation_identities.org_id IS '组织隔离键';
+COMMENT ON COLUMN installation_identities.installation_id IS '安装';
+COMMENT ON COLUMN installation_identities.claim IS '最近报告的身份；JSON null 表示仅报告注册用户名';
+COMMENT ON COLUMN installation_identities.state IS '最近匹配结果';
+COMMENT ON COLUMN installation_identities.updated_at IS '最近变化';
+
+CREATE TABLE employee_domain_accounts (
+  org_id uuid NOT NULL REFERENCES organizations(id),
+  domain varchar(128) NOT NULL,
+  account_name varchar(128) NOT NULL,
+  employee_id uuid NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (org_id,domain,account_name),
+  FOREIGN KEY (org_id, employee_id) REFERENCES employees(org_id, id)
+) ;
+COMMENT ON TABLE employee_domain_accounts IS '已报告域账号的归属记录；跨域同工号归到同一员工';
+COMMENT ON COLUMN employee_domain_accounts.org_id IS '组织隔离键';
+COMMENT ON COLUMN employee_domain_accounts.domain IS '规范化域';
+COMMENT ON COLUMN employee_domain_accounts.account_name IS '规范化域账号';
+COMMENT ON COLUMN employee_domain_accounts.employee_id IS '员工';
+COMMENT ON COLUMN employee_domain_accounts.created_at IS '创建时间';
 -- 维护任务每月提前创建未来两个月；不使用 default 分区掩盖故障。
 DO $$
 DECLARE m timestamptz; partition_name text;
