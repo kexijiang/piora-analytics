@@ -44,3 +44,5 @@
 历史记录（现已由下述统一入口取代）：挂载模式存储路径补充：compose.config.yaml 要求 POSTGRES_DATA_DIR、EXPORT_DATA_DIR 指定已有宿主机目录，分别绑定 PostgreSQL 数据和共享导出目录，不再使用命名卷；默认 compose.yaml 保持原行为。
 
 统一部署入口：仅保留 compose.yaml，默认挂载 config/.env，并要求指定宿主机 PostgreSQL 和导出目录。scripts/start.sh 同步读取配置并启动；Release 附件及隔离启动检查使用新入口。
+
+部署配置维护：CONFIG_DIR 仅通过启动参数/宿主机环境变量指定；新增 Compose、配置模板与配置表一致性检查，容器初始化组织/账号提供默认值。Release 冒烟增加 API/Worker 只读挂载与 EROFS 断言，本地隔离验证通过，远端发布尚未执行。

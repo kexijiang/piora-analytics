@@ -94,3 +94,11 @@ GitHub CI 状态以相应提交的 Actions 为准，本文件不预报未来结�
 ### 统一 Compose 与启动入口验证
 
 check、typecheck、9 项单元测试和 dashboard build 通过。Windows Git Bash 下使用远端 v0.1.2 镜像、带空格的配置路径和独立测试 PostgreSQL 目录，通过 scripts/start.sh offline 启动隔离项目；数据库和 API 健康、init 正常退出，/health/ready 返回 200。配置目录只读、导出目录可写的 bind 挂载通过检查，原有 scripts/start.sh 已直接包含完整启动逻辑，调整后重新启动验证通过，测试容器已关闭。未改变现有部署，未将上述测试视为真实设备上传验收。Release 工作流已改为测试同一启动脚本，尚未通过新 tag 执行发布。
+
+### 部署配置一致性与只读挂载检查
+
+2026-11-17，Docker Compose v5.3.1 本地解析实测：env 文件设 CONFIG_DIR=./from-env-file 时，无宿主机变量则使用文件值；宿主机 CONFIG_DIR=D:/synthetic-shell-config 时使用宿主机值。此项只执行 compose config，没有启动容器。示例现移除 CONFIG_DIR，避免重复来源。
+
+check/typecheck/9 项单元测试/build 通过；配置检查反向验证能拒绝 Compose 新增未文档化变量，以及模板配置缺少表格说明。Release YAML 解析和内嵌 Bash 语法检查通过。
+
+使用 v0.1.2 应用镜像、独立空 PostgreSQL 目录和合成凭证启动 piora-guards-smoke；未配置 INIT_ORG_NAME/INIT_ADMIN_USERNAME，初始化正常退出，默认 admin 的 HTTP 登录及会话检查通过。API、Worker 的 /config 挂载均 RW=false，Node 写入探针均抛出 EROFS。测试容器已关闭，未触碰现有部署。本次未执行远端 tag 发布，也不代表真实设备上传验证。

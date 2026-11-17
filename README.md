@@ -61,4 +61,9 @@ PostgreSQL 集成检查只允许对名称以 _test 结尾的空数据库执行�
 
 此仓库为私有内部服务仓库。所有示例姓名、账号、设备、Token 和截图均为合成数据。没有生产密钥或真实员工数据。
 
-宿主机配置目录挂载：使用唯一的 `compose.yaml`，通过 `bash scripts/start.sh image <配置目录>` 启动，见[配置目录挂载说明](docs/deployment.md#准备目录与配置)。
+Docker 部署只使用 `compose.yaml`：先复制 `.env.docker.example` 到配置目录的 `.env`，填写秘密与访问地址，**必须设置 POSTGRES_DATA_DIR、EXPORT_DATA_DIR 并预先创建对应宿主机目录**。配置目录通过脚本参数指定。
+
+- 发布镜像：设置 IMAGE_NAME=ghcr.io/kexijiang/piora-analytics 和已发布 APP_VERSION，再运行 `bash scripts/start.sh image <配置目录>`。
+- 源码构建：使用 IMAGE_NAME=piora-analytics，运行 `bash scripts/start.sh local <配置目录>`。
+
+完整步骤及配置项见[部署说明](docs/deployment.md#准备目录与配置)。
