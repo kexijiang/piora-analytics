@@ -7,3 +7,6 @@ playwright-report
 apps/dashboard/dist
 .env*
 docs/ui/screenshots
+
+# Host-mounted deployment configuration (may contain secrets).
+config/
