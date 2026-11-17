@@ -138,6 +138,7 @@ docker compose up -d --no-build --wait
   compose.config.yaml
   config/
     .env
+  # 数据目录可位于独立的大容量磁盘
 ```
 
 Linux 示例（先编辑配置，替换所有空密钥及服务器地址）：
@@ -146,6 +147,7 @@ Linux 示例（先编辑配置，替换所有空密钥及服务器地址）：
 mkdir -p config
 cp .env.docker.example config/.env
 # 编辑 config/.env，设置真实密钥、ANALYTICS_ORIGIN、ALLOW_HTTP 等
+# 必须设置 POSTGRES_DATA_DIR 和 EXPORT_DATA_DIR，并先创建对应目录
 # 使用发布镜像：IMAGE_NAME=ghcr.io/kexijiang/piora-analytics
 # APP_VERSION=已发布版本，例如 v0.1.2
 docker compose -f compose.config.yaml --env-file ./config/.env up -d --no-build --wait
@@ -153,6 +155,29 @@ docker compose -f compose.config.yaml --env-file ./config/.env logs --tail=100 i
 ```
 
 默认 `CONFIG_DIR=./config` 相对于 Compose 文件目录解析。需要自定义路径时，在该配置文件中设置绝对路径，例如 `CONFIG_DIR=/srv/piora/config`，启动时也指定 `--env-file /srv/piora/config/.env`。Windows Docker Desktop 可使用 `CONFIG_DIR=D:/piora-config`，对应 `--env-file D:/piora-config/.env`。宿主机目录必须事先存在，并允许镜像中的 node 用户（UID 1000）读取目录与文件；Linux 可将目录归属 UID 1000、目录权限设为 700、文件设为 600。不要将含密钥的目录共享给无关用户或提交到仓库。
+
+数据库和导出目录同样在配置文件中指定，以下以大容量盘挂载点 `/data` 为例：
+
+```dotenv
+CONFIG_DIR=/data/piora/config
+POSTGRES_DATA_DIR=/data/piora/postgres
+EXPORT_DATA_DIR=/data/piora/exports
+```
+
+`POSTGRES_DATA_DIR` 挂载到 PostgreSQL 18 的 `/var/lib/postgresql`，`EXPORT_DATA_DIR` 由 API 和 Worker 共享挂载到 `/exports`，两者可读写；配置目录仍只读。三个目录应相互独立，不要重叠。数据路径为必填项，没有系统盘路径回退，目录不存在时启动失败而不会自动创建。
+
+首次部署先检查磁盘，再创建目录（不是只创建一个叫 `/data` 的文件夹）：
+
+```sh
+findmnt -T /data
+df -hT /data
+sudo mkdir -p /data/piora/config /data/piora/postgres /data/piora/exports
+sudo chown 1000:1000 /data/piora/config /data/piora/exports
+sudo chmod 700 /data/piora/config /data/piora/exports
+# config/.env 也需要 UID 1000 可读；PostgreSQL 目录由官方镜像初始化权限。
+```
+
+Windows Docker Desktop 可用 `D:/piora-data/postgres`、`D:/piora-data/exports`，目录同样需要预先创建。Linux 的磁盘挂载应配置为开机自动挂载，启动前确认磁盘就绪；目录存在本身不能证明大容量盘已挂载。不要修改正在使用中的数据路径。绑定目录中的文件不会被 `docker compose down -v` 删除；默认命名卷模式仍会受该命令影响。
 
 配置在进程启动时读取，没有热加载。修改后使用相同参数重建应用容器：
 
@@ -162,7 +187,7 @@ docker compose -f compose.config.yaml --env-file ./config/.env up -d --no-build 
 
 `DATABASE_URL` 由 Compose 根据数据库密码和内部服务地址生成；`PORT`、`HOST`、`EXPORT_DIR` 等容器内部参数由 Compose 固定。其余应用配置从挂载文件读取。不要直接修改已有数据库卷的 POSTGRES_PASSWORD 或 ANALYTICS_PEPPER；它们不是普通热更新配置。
 
-切换现有部署时保持原 Compose 项目名（例如 `-p 原项目名`），以复用原数据卷。默认 compose.yaml 的环境变量注入方式仍可用。当前 v0.1.2 镜像已支持 Node 的文件读取参数，可配合这份 Compose 文件使用；新增文件将在下一次 Release 中作为附件提供。
+挂载模式直接使用指定的宿主机目录，不使用 pgdata/exports 命名卷。已有命名卷的数据不会自动迁移，切换前需停写、备份并恢复到新目录；即使项目名相同，也不会自动复用命名卷。默认 compose.yaml 的环境变量注入方式仍可用。当前 v0.1.2 镜像已支持 Node 的文件读取参数，可配合这份 Compose 文件使用；新增文件将在下一次 Release 中作为附件提供。
 
 ### 版本镜像与离线部署
 
@@ -178,7 +203,7 @@ bash scripts/start.sh image
 
 私有 GHCR 包需要先 docker login ghcr.io。离线服务器下载 Release tar 后 `docker load -i <镜像文件.tar>`，还必须从联网机器预先导出并加载 `postgres:18` 镜像（应用 tar 不包含 PostgreSQL）。复制 compose.yaml 和配置文件后，运行 `docker compose up -d --no-build --pull never --wait`；有源码目录也可用 `bash scripts/start.sh offline`。镜像仅适用于 linux/amd64。
 
-数据保存在 pgdata、exports 命名卷中，更新时保持同一 Compose 项目名/目录。`docker compose down` 保留数据，`down -v` 会删除数据。升级前备份数据库；PEPPER 必须保持不变。生产备份、告警和权限拆分仍由运维配置，默认单 API、单 Worker。
+默认 compose.yaml 使用 pgdata、exports 命名卷，更新时保持同一 Compose 项目名/目录；compose.config.yaml 使用指定宿主机目录。`docker compose down` 保留数据，`down -v` 会删除数据。升级前备份数据库；PEPPER 必须保持不变。生产备份、告警和权限拆分仍由运维配置，默认单 API、单 Worker。
 
 HTTPS 部署可参考 [Caddy 配置](../deploy/Caddyfile.example)，并将 ANALYTICS_ORIGIN 设置为 HTTPS 地址、ALLOW_HTTP=false。HTTP 与 HTTPS 使用不同会话 Cookie，切换后重新登录。
 

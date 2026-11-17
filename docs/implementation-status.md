@@ -40,3 +40,5 @@
 - 单进程 API 使用内存限流，默认部署单副本。增加 API 副本前应把账号失败计数/限流移到共享存储。查询容量、保留期磁盘、备份恢复和真实锁屏/休眠/安装包仍须试点验证。
 
 2026-11-17 宿主机配置挂载：新增独立 compose.config.yaml，init/API/worker 从只读挂载的 /config/.env 读取配置，同一宿主机文件也作为 Compose --env-file 输入。原 compose.yaml 保持可用。远端 v0.1.2 镜像已在隔离空库验证，带空格的 Windows 路径、只读拒写、修改配置并重建后的登录通过；未改变现有运行服务的配置方式。
+
+挂载模式存储路径补充：compose.config.yaml 要求 POSTGRES_DATA_DIR、EXPORT_DATA_DIR 指定已有宿主机目录，分别绑定 PostgreSQL 数据和共享导出目录，不再使用命名卷；默认 compose.yaml 保持原行为。
