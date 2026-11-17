@@ -52,6 +52,9 @@ test("unbound device statistics, empty employee guidance and domain auto matchin
     await page.getByLabel("不存在时自动创建员工").check();
     await page.getByRole("button", { name: "添加域规则", exact: true }).click();
     await page.getByLabel("域名 1", { exact: true }).fill("CHINA");
+    await page.getByRole("button", { name: "添加域规则", exact: true }).click();
+    await page.getByLabel("域名 2", { exact: true }).fill("OTHER");
+    await expect(page.getByLabel(/工号前缀/)).toHaveCount(0);
     await page
       .getByRole("button", { name: "保存域账号规则", exact: true })
       .click();
@@ -73,6 +76,22 @@ test("unbound device statistics, empty employee guidance and domain auto matchin
     });
     expect(response.status()).toBe(200);
     expect((await response.json()).data.state).toBe("matched");
+    const moved = await page.request.post("/v1/installations/identity", {
+      headers: {
+        authorization: fixture.bearer,
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+      data: {
+        identity: {
+          account_type: "domain",
+          domain: "OTHER",
+          account_name: "001234",
+          source: "windows_logon",
+        },
+      },
+    });
+    expect(moved.status()).toBe(200);
+    expect((await moved.json()).data.state).toBe("matched");
     await page.reload();
     await page.getByRole("button", { name: /采集健康/ }).click();
     await expect(page.getByText("域账号匹配成功 · 自动关联")).toBeVisible();

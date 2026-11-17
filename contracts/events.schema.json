@@ -832,12 +832,6 @@
           "minLength": 1,
           "maxLength": 128
         },
-        "employee_prefix": {
-          "type": "string",
-          "maxLength": 32,
-          "pattern": "^[A-Za-z0-9_-]*$",
-          "description": "工号前缀；多域必须使用不同前缀"
-        },
         "format": {
           "type": "string",
           "enum": [
@@ -858,7 +852,6 @@
       },
       "required": [
         "domain",
-        "employee_prefix",
         "format",
         "case"
       ]
@@ -886,7 +879,7 @@
           "items": {
             "$ref": "#/$defs/IdentityRule"
           },
-          "description": "域映射规则；域与前缀各自唯一",
+          "description": "允许的域及工号校验规则；同一组织内工号全局唯一",
           "maxItems": 20
         }
       },

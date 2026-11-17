@@ -154,7 +154,7 @@
     {
       "name": "employee_domain_accounts",
       "columns": 5,
-      "description": "组织内域账号与员工的一对一归属，防止多域误合并"
+      "description": "已报告域账号的归属记录；多个允许域的同一工号归到同一员工"
     }
   ]
 }

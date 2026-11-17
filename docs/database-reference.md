@@ -687,7 +687,7 @@ Windows 安装实例，用户名仅供匹配。
 
 ## employee_domain_accounts
 
-组织内域账号与员工的一对一归属，防止多域误合并。
+已报告域账号的归属记录；多个允许域的同一工号归到同一员工。
 
 | 字段 | PostgreSQL 类型 | SQL 约束/默认值 | 说明 |
 |---|---|---|---|
@@ -700,5 +700,4 @@ Windows 安装实例，用户名仅供匹配。
 表约束：
 
 - PRIMARY KEY (org_id,domain,account_name)
-- UNIQUE (org_id,employee_id)
 - FOREIGN KEY (org_id, employee_id) REFERENCES employees(org_id, id)

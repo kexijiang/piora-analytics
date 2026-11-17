@@ -2351,7 +2351,6 @@
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 |---|---|---|---|---|
 | domain | string | true | {"minLength":1,"maxLength":128} | 允许的域，大小写不敏感 |
-| employee_prefix | string | true | {"maxLength":32,"pattern":"^[A-Za-z0-9_-]*$"} | 工号前缀；多域必须使用不同前缀 |
 | format | string | true | {"enum":["digits","alphanumeric"]} | 工号格式，保留前导零 |
 | case | string | true | {"enum":["preserve","upper","lower"]} | 登录名大小写归一化 |
 
@@ -2362,7 +2361,7 @@
 | version | integer | true | {"minimum":0,"maximum":2147483647} | 版本 |
 | enabled | boolean | true | {} | 自动关联是否启用 |
 | auto_create | boolean | true | {} | 是否自动创建员工 |
-| rules | array<IdentityRule> | true | {"maxItems":20} | 域映射规则；域与前缀各自唯一 |
+| rules | array<IdentityRule> | true | {"maxItems":20} | 允许的域及工号校验规则；同一组织内工号全局唯一 |
 
 ## IdentityPolicyUpdate
 

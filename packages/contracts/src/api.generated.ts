@@ -1102,8 +1102,6 @@ export interface components {
         IdentityRule: {
             /** @description 允许的域，大小写不敏感 */
             domain: string;
-            /** @description 工号前缀；多域必须使用不同前缀 */
-            employee_prefix: string;
             /**
              * @description 工号格式，保留前导零
              * @enum {string}
@@ -1122,7 +1120,7 @@ export interface components {
             enabled: boolean;
             /** @description 是否自动创建员工 */
             auto_create: boolean;
-            /** @description 域映射规则；域与前缀各自唯一 */
+            /** @description 允许的域及工号校验规则；同一组织内工号全局唯一 */
             rules: components["schemas"]["IdentityRule"][];
         };
         IdentityPolicyUpdate: {

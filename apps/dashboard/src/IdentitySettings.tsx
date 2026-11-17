@@ -115,24 +115,6 @@ export function IdentitySettings({ admin }: { admin: boolean }) {
                     />
                   </label>
                   <label>
-                    工号前缀
-                    <input
-                      aria-label={`工号前缀 ${index + 1}`}
-                      value={rule.employee_prefix}
-                      maxLength={32}
-                      onChange={(e) =>
-                        setPolicy({
-                          ...policy,
-                          rules: policy.rules.map((r, i) =>
-                            i === index
-                              ? { ...r, employee_prefix: e.target.value }
-                              : r,
-                          ),
-                        })
-                      }
-                    />
-                  </label>
-                  <label>
                     工号格式
                     <select
                       aria-label={`工号格式 ${index + 1}`}
@@ -193,7 +175,7 @@ export function IdentitySettings({ admin }: { admin: boolean }) {
                 </fieldset>
               ))}
               <p className="muted">
-                单域可留空工号前缀。多个域须使用不同前缀，避免同名账号被误合并。客户端报告的域账号仅用于统计归属，不授予后台权限。
+                工号在组织内唯一；不同允许域的同一工号自动归到同一员工，无需前缀映射。客户端报告的域账号仅用于统计归属，不授予后台权限。
               </p>
               <button
                 type="button"
@@ -206,7 +188,6 @@ export function IdentitySettings({ admin }: { admin: boolean }) {
                       ...policy.rules,
                       {
                         domain: "",
-                        employee_prefix: "",
                         format: "digits",
                         case: "preserve",
                       },

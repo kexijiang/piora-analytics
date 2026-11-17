@@ -41,6 +41,41 @@ const db = await testDatabase({
       "INSERT INTO installation_bindings(id,org_id,installation_id,employee_id,valid_days,reason) VALUES($1,$2,$3,$4,daterange(current_date-1,NULL,'[)'),'Existing manual decision')",
       [upgradeBinding, upgradeOrg, upgradeInstallation, upgradeEmployee],
     );
+    await pool.query(
+      fs.readFileSync(
+        new URL(
+          "../database/migrations/0002_domain_identity.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    await pool.query(
+      "INSERT INTO schema_migrations(name) VALUES('0002_domain_identity.sql')",
+    );
+    await pool.query(
+      "INSERT INTO org_settings(org_id,name,value) VALUES($1,'identity',$2)",
+      [
+        upgradeOrg,
+        {
+          version: 1,
+          enabled: true,
+          auto_create: true,
+          rules: [
+            {
+              domain: "CHINA",
+              employee_prefix: "OLD-",
+              format: "digits",
+              case: "preserve",
+            },
+          ],
+        },
+      ],
+    );
+    await pool.query(
+      "INSERT INTO employee_domain_accounts(org_id,domain,account_name,employee_id) VALUES($1,'CHINA','007',$2)",
+      [upgradeOrg, upgradeEmployee],
+    );
   },
 });
 let app, app2;
@@ -54,6 +89,17 @@ try {
   assert.equal(upgraded.source, "manual");
   assert.equal(upgraded.employee_id, upgradeEmployee);
   assert.equal(upgraded.reason, "Existing manual decision");
+  const upgradedPolicy = (
+    await db.pool.query(
+      "SELECT value FROM org_settings WHERE org_id=$1 AND name='identity'",
+      [upgradeOrg],
+    )
+  ).rows[0].value;
+  assert.equal("employee_prefix" in upgradedPolicy.rules[0], false);
+  await db.pool.query(
+    "INSERT INTO employee_domain_accounts(org_id,domain,account_name,employee_id) VALUES($1,'OTHER','007',$2)",
+    [upgradeOrg, upgradeEmployee],
+  );
   const org = uuid(),
     admin = uuid(),
     origin = "http://127.0.0.1:14991";
@@ -114,7 +160,6 @@ try {
   }
   const rule = {
     domain: "CHINA",
-    employee_prefix: "",
     format: "digits",
     case: "preserve",
   };
@@ -123,7 +168,7 @@ try {
       ...policy,
       enabled: true,
       auto_create: true,
-      rules: [rule, { ...rule, domain: "OTHER" }],
+      rules: [rule, { ...rule, domain: "china" }],
     },
     422,
   );
@@ -131,7 +176,7 @@ try {
     ...policy,
     enabled: true,
     auto_create: true,
-    rules: [rule, { ...rule, domain: "OTHER", employee_prefix: "OTHER-" }],
+    rules: [rule, { ...rule, domain: "OTHER" }],
   });
   const enrollment = (
     await call(
@@ -177,7 +222,7 @@ try {
     (await call("GET", "/v1/admin/installations/" + b.installation_id)).json()
       .data;
   const a = reg(identity()),
-    b = reg(identity());
+    b = reg(identity("001234", "OTHER"));
   await Promise.all([register(a), register(a), register(b)]);
   assert.equal(
     (
@@ -225,7 +270,12 @@ try {
   assert.equal(changed.employee_id, employee.id);
   const other = reg(identity("001234", "OTHER"));
   await register(other);
-  assert.notEqual((await get(other)).employee_id, employee.id);
+  assert.equal((await get(other)).employee_id, employee.id);
+  assert.equal(
+    (await report(b, identity("001234", "OTHER"))).json().data.state,
+    "matched",
+  );
+  assert.equal((await get(b)).employee_id, employee.id);
   const legacy = reg();
   await register(legacy);
   assert.equal((await get(legacy)).identity_status.state, "missing");
@@ -312,7 +362,7 @@ try {
     (await report(missing, identity("333333"))).json().data.employee_id,
     existing,
   );
-  // A changed prefix cannot silently attach another domain to an already claimed employee.
+  // Allowed domains use the same organization-wide employee number.
   await setPolicy({
     ...policy,
     auto_create: true,
@@ -326,7 +376,8 @@ try {
   );
   const cross = reg(identity("333333", "OTHER"));
   await register(cross);
-  assert.equal((await get(cross)).identity_status.state, "identity_conflict");
+  assert.equal((await get(cross)).identity_status.state, "matched");
+  assert.equal((await get(cross)).employee_id, existing);
   await setPolicy({ ...policy, enabled: false, rules: [rule] });
   const disabled = reg(identity("004444"));
   await register(disabled);

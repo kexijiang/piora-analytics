@@ -16,18 +16,12 @@ export async function identityPolicy(c, org) {
   );
 }
 export function validateIdentityPolicy(policy) {
-  const domains = new Set(),
-    prefixes = new Set();
+  const domains = new Set();
   for (const rule of policy.rules) {
     const domain = rule.domain.trim().toUpperCase();
-    if (
-      !/^[A-Z0-9][A-Z0-9._-]*$/.test(domain) ||
-      domains.has(domain) ||
-      prefixes.has(rule.employee_prefix)
-    )
-      throw new ApiError(422, "POLICY_INVALID", "域和工号前缀不能重复");
+    if (!/^[A-Z0-9][A-Z0-9._-]*$/.test(domain) || domains.has(domain))
+      throw new ApiError(422, "POLICY_INVALID", "域名无效或重复");
     domains.add(domain);
-    prefixes.add(rule.employee_prefix);
   }
   if (policy.enabled && !policy.rules.length)
     throw new ApiError(422, "POLICY_INVALID", "启用自动关联需要至少一个域规则");
@@ -139,7 +133,7 @@ export async function matchIdentity(c, claim, ctx) {
     return finish("invalid_account");
   if (rule.case === "upper") account = account.toUpperCase();
   if (rule.case === "lower") account = account.toLowerCase();
-  const employeeNo = rule.employee_prefix + account;
+  const employeeNo = account;
   if (employeeNo.length > 64) return finish("invalid_account");
   // Do not rewrite any existing/future/historical association automatically.
   const bindings = (
@@ -156,31 +150,20 @@ export async function matchIdentity(c, claim, ctx) {
       [ctx.org, domain, account],
     )
   ).rows[0];
+  // Employee numbers are unique organization-wide, including across allowed domains.
+  let employee = (
+    await c.query(
+      "SELECT * FROM employees WHERE org_id=$1 AND employee_no=$2 FOR UPDATE",
+      [ctx.org, employeeNo],
+    )
+  ).rows[0];
   if (
-    bindings.length &&
-    (!mapped || bindings.some((b) => b.employee_id !== mapped.id))
+    (mapped && mapped.id !== employee?.id) ||
+    (bindings.length &&
+      (!employee || bindings.some((b) => b.employee_id !== employee.id)))
   )
     return finish("identity_conflict");
-  let employee =
-    mapped ??
-    (
-      await c.query(
-        "SELECT * FROM employees WHERE org_id=$1 AND employee_no=$2 FOR UPDATE",
-        [ctx.org, employeeNo],
-      )
-    ).rows[0];
   if (employee?.status === "archived") return finish("employee_archived");
-  if (
-    employee &&
-    !mapped &&
-    (
-      await c.query(
-        "SELECT 1 FROM employee_domain_accounts WHERE org_id=$1 AND employee_id=$2",
-        [ctx.org, employee.id],
-      )
-    ).rowCount
-  )
-    return finish("identity_conflict");
   if (!employee) {
     if (!policy.auto_create) return finish("employee_missing");
     employee = (

@@ -40,8 +40,8 @@ add('EmployeeUpdate',{name:str('员工显示名',120),employee_no:nil(str('工�
 add('RevisionInput',{expected_revision:integer('版本'),reason:str('操作原因',500)});
 add('CredentialMaterial',{credential_id:id,secret:{type:'string',minLength:43,maxLength:43,pattern:'^[A-Za-z0-9_-]{43}$',description:'客户端生成的 32 随机字节 base64url；注册前使用 DPAPI 保存；仅认证接口可携带',writeOnly:true}});
 add('WindowsIdentity',{account_type:en(['domain','local','unknown'],'客户端报告的账号类型，不是身份认证'),domain:nil(str('域名；本地或未知时为空',128)),account_name:nil(str('域登录名，不能用显示名或目录猜测',128)),source:en(['windows_logon','unavailable'],'采集来源')});
-add('IdentityRule',{domain:str('允许的域，大小写不敏感',128),employee_prefix:{type:'string',maxLength:32,pattern:'^[A-Za-z0-9_-]*$',description:'工号前缀；多域必须使用不同前缀'},format:en(['digits','alphanumeric'],'工号格式，保留前导零'),case:en(['preserve','upper','lower'],'登录名大小写归一化')});
-add('IdentityPolicy',{version:integer('版本'),enabled:flag('自动关联是否启用'),auto_create:flag('是否自动创建员工'),rules:list(ref('IdentityRule'),'域映射规则；域与前缀各自唯一',20)});
+add('IdentityRule',{domain:str('允许的域，大小写不敏感',128),format:en(['digits','alphanumeric'],'工号格式，保留前导零'),case:en(['preserve','upper','lower'],'登录名大小写归一化')});
+add('IdentityPolicy',{version:integer('版本'),enabled:flag('自动关联是否启用'),auto_create:flag('是否自动创建员工'),rules:list(ref('IdentityRule'),'允许的域及工号校验规则；同一组织内工号全局唯一',20)});
 add('IdentityPolicyUpdate',{policy:ref('IdentityPolicy'),expected_revision:integer('当前版本'),reason:str('修改原因',500)});
 add('IdentityResult',{identity:nil(ref('WindowsIdentity')),state:en(['missing','local','unknown','disabled','domain_not_allowed','invalid_account','employee_missing','employee_archived','identity_conflict','binding_preserved','matched'],'匹配结果'),employee_id:nil(id),binding_source:en(['none','manual','domain'],'当前绑定来源')});
 add('IdentityUpdate',{identity:ref('WindowsIdentity')});
