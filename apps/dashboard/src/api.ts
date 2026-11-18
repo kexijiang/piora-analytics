@@ -1,3 +1,4 @@
+import { randomUUID } from "./uuid";
 import type { components } from "../../../packages/contracts/src/api.generated";
 import data from "./demo/data.json";
 type S = components["schemas"];
@@ -21,7 +22,7 @@ export async function api<T>(
     headers: {
       "Content-Type": "application/json",
       ...(method !== "GET"
-        ? { "X-CSRF-Token": csrf, "Idempotency-Key": crypto.randomUUID() }
+        ? { "X-CSRF-Token": csrf, "Idempotency-Key": randomUUID() }
         : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -80,7 +81,7 @@ function demo(url: string, body: unknown, method: string): unknown {
   );
   const metrics = sum(rows.map((r) => r.metrics)),
     meta = {
-      request_id: crypto.randomUUID(),
+      request_id: randomUUID(),
       server_time: "2026-11-13T09:45:00Z",
       timezone: "Asia/Shanghai",
       aggregation_as_of: "2026-11-13T09:43:10Z",
@@ -317,7 +318,7 @@ function demo(url: string, body: unknown, method: string): unknown {
       inst = data.installations.find((i) => i.id === id);
     if (inst) inst.employee_id = b.employee_id;
     result = {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       installation_id: id,
       ...b,
       revision: 1,
@@ -353,7 +354,7 @@ function demo(url: string, body: unknown, method: string): unknown {
       const input = body as S["EnrollmentInput"];
       const key: S["EnrollmentKey"] = {
         ...input,
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         used_registrations: 0,
         revoked_at: null,
         revision: 1,

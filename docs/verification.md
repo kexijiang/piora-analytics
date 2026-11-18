@@ -102,3 +102,5 @@ check、typecheck、9 项单元测试和 dashboard build 通过。Windows Git Ba
 check/typecheck/9 项单元测试/build 通过；配置检查反向验证能拒绝 Compose 新增未文档化变量，以及模板配置缺少表格说明。Release YAML 解析和内嵌 Bash 语法检查通过。
 
 使用 v0.1.2 应用镜像、独立空 PostgreSQL 目录和合成凭证启动 piora-guards-smoke；未配置 INIT_ORG_NAME/INIT_ADMIN_USERNAME，初始化正常退出，默认 admin 的 HTTP 登录及会话检查通过。API、Worker 的 /config 挂载均 RW=false，Node 写入探针均抛出 EROFS。测试容器已关闭，未触碰现有部署。本次未执行远端 tag 发布，也不代表真实设备上传验证。
+
+2026-11-18（issue #14）：看板缺少原生 crypto.randomUUID 时使用 getRandomValues 生成 UUID v4。check、typecheck、9 项单元测试、build 及新增 Edge 浏览器回归通过；浏览器通过禁用 randomUUID 和模拟 API 响应验证登录请求的幂等键及错误响应处理，未验证生产部署、真实 HTTP 内网来源或真实设备接入。
