@@ -606,3 +606,103 @@ export async function ingest(c, b, ctx, req) {
   }
   return out;
 }
+
+export async function recover(c, body, req, config) {
+  if (req.headers["idempotency-key"] !== body.recovery_id)
+    throw new ApiError(400, "VALIDATION_ERROR");
+  // Serialize recovery with rotation and administrative revocation.
+  const installation = await one(
+    c,
+    "SELECT status FROM installations WHERE org_id=$1 AND id=$2 FOR UPDATE",
+    [config.org, body.installation_id],
+    401,
+  );
+  if (installation.status !== "active")
+    throw new ApiError(403, "INSTALLATION_REVOKED");
+  const previous = await one(
+    c,
+    "SELECT * FROM installation_credentials WHERE org_id=$1 AND installation_id=$2 AND id=$3",
+    [config.org, body.installation_id, body.previous_credential.credential_id],
+    401,
+  );
+  if (
+    !sameHash(
+      previous.secret_hash,
+      secretHash(body.previous_credential.secret, config.pepper),
+    )
+  )
+    throw new ApiError(401, "AUTH_REQUIRED");
+  if (previous.revoked_at) throw new ApiError(403, "INSTALLATION_REVOKED");
+  const requestHash = digest({
+    body,
+    authorization: req.headers.authorization ?? "",
+  });
+  const replay = (
+    await c.query(
+      "SELECT * FROM installation_credentials WHERE org_id=$1 AND installation_id=$2 AND rotation_id=$3",
+      [config.org, body.installation_id, body.recovery_id],
+    )
+  ).rows[0];
+  const result = (credential) => ({
+    installation_id: body.installation_id,
+    credential_id: credential.id,
+    expires_at: new Date(credential.expires_at).toISOString(),
+  });
+  if (replay) {
+    if (!replay.recovery_hash || !sameHash(replay.recovery_hash, requestHash))
+      throw new ApiError(409, "IDEMPOTENCY_CONFLICT");
+    if (replay.revoked_at) throw new ApiError(403, "INSTALLATION_REVOKED");
+    return result(replay);
+  }
+  const newer = (
+    await c.query(
+      "SELECT 1 FROM installation_credentials WHERE org_id=$1 AND installation_id=$2 AND id<>$4 AND expires_at>=$3 LIMIT 1",
+      [config.org, body.installation_id, previous.expires_at, previous.id],
+    )
+  ).rowCount;
+  if (
+    new Date(previous.expires_at) > new Date() ||
+    new Date(previous.valid_until).getTime() !==
+      new Date(previous.expires_at).getTime() ||
+    newer
+  )
+    throw new ApiError(409, "CREDENTIAL_RECOVERY_NOT_ALLOWED");
+  const parts = String(req.headers.authorization ?? "").split(".");
+  if (
+    parts.length !== 3 ||
+    parts[0] !== "Bearer enroll" ||
+    !/^[0-9a-f-]{36}$/i.test(parts[1])
+  )
+    throw new ApiError(401, "AUTH_REQUIRED");
+  const key = await one(
+    c,
+    "SELECT * FROM enrollment_keys WHERE org_id=$1 AND id=$2 FOR UPDATE",
+    [config.org, parts[1]],
+    401,
+  );
+  if (
+    !sameHash(key.secret_hash, secretHash(parts[2], config.pepper)) ||
+    key.revoked_at ||
+    new Date(key.expires_at) <= new Date() ||
+    key.used_registrations >= key.max_registrations
+  )
+    throw new ApiError(403, "ENROLLMENT_INVALID");
+  const expiry = future(90);
+  await c.query(
+    "INSERT INTO installation_credentials(id,org_id,installation_id,rotation_id,secret_hash,expires_at,valid_until,recovery_hash) VALUES($1,$2,$3,$4,$5,$6,$6,$7)",
+    [
+      body.next_credential.credential_id,
+      config.org,
+      body.installation_id,
+      body.recovery_id,
+      secretHash(body.next_credential.secret, config.pepper),
+      expiry,
+      requestHash,
+    ],
+  );
+  await c.query(
+    "UPDATE enrollment_keys SET used_registrations=used_registrations+1,revision=revision+1 WHERE id=$1",
+    [key.id],
+  );
+  return result({ id: body.next_credential.credential_id, expires_at: expiry });
+}

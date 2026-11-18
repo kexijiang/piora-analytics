@@ -48,6 +48,8 @@ add('IdentityUpdate',{identity:ref('WindowsIdentity')});
 add('ServerCapabilities',{capabilities:list(en(['windows-domain-identity-v1','windows-display-name-v1'],'服务端能力'),'能力列表',10)});
 add('RegisterInput',{registration_id:id,installation_id:id,credential:ref('CredentialMaterial'),windows_username:str('当前系统账号；不是员工 ID',128),device_label:str('设备显示名',128),app_version:str('Piora 版本',64),sdk_version:str('Pi SDK 版本',64),protocol_version:en(['1.0'],'协议版本'),capabilities:list(en(['desktop_activity','query','model_usage','file_write','file_edit'],'采集能力'),'客户端能力',20),windows_identity:ref('WindowsIdentity')},['windows_identity']);
 add('RegisterResult',{installation_id:id,status:en(['active','pending_identity'],'可上报；人员绑定待确认不阻止接收'),organization_name:str('组织显示名称',120),credential_id:id,credential_expires_at:time('凭证有效期；90 天'),policy:ref('SyncPolicy')});
+add('RecoverInput',{recovery_id:id,installation_id:id,previous_credential:ref('CredentialMaterial'),next_credential:ref('CredentialMaterial')});
+add('RecoverResult',{installation_id:id,credential_id:id,expires_at:time('恢复后的设备凭证有效期；90 天')});
 add('RotateInput',{rotation_id:id,next_credential:ref('CredentialMaterial')});
 add('RotateResult',{credential_id:id,expires_at:time('新凭证 90 天有效期'),previous_valid_until:time('旧凭证过渡期，24 小时')});
 add('Installation',{id,windows_username:str('Windows 账号',128),device_label:str('设备显示名',128),employee_id:nil(uuid('当前绑定员工')),app_version:str('上次上报版本',64),status:en(['active','revoked'],'安装状态'),last_received_at:nil(time('最后收到数据')),last_event_at:nil(time('最后事件发生时间')),reported_queue_events:count('上次上报时的积压，不是实时值'),coverage:ref('Coverage'),revision:integer('版本')});
@@ -146,6 +148,7 @@ route('post','/v1/installations/identity','updateIdentity','补报当前安装�
 route('get','/v1/admin/settings/identity','getIdentityPolicy','固定账号自动关联行为（兼容接口）',null,'IdentityPolicy');
 route('patch','/v1/admin/settings/identity','updateIdentityPolicy','兼容旧版保存请求；返回固定自动关联策略','IdentityPolicyUpdate','IdentityPolicy');
 route('post','/v1/installations/register','registerInstallation','安装注册','RegisterInput','RegisterResult','enrollment',[],201);
+route('post','/v1/installations/credentials/recover','recoverCredential','恢复自然过期的设备凭证','RecoverInput','RecoverResult','enrollment');
 route('post','/v1/installations/credentials/rotate','rotateCredential','轮换安装凭证','RotateInput','RotateResult','device');
 route('post','/v1/telemetry/batches','ingestBatch','批量上报并逐事件确认','BatchInput','BatchResult','device');
 for(const [p,n,s] of [['overview','Overview','总览'],['trends','TrendPointList','趋势'],['employees/daily','DailyRowPage','员工每日明细'],['employees/{id}','EmployeeDetail','员工详情'],['queries','QueryPage','请求列表'],['queries/{id}','QueryDetail','请求详情'],['queries/{id}/calls','ModelCallPage','请求调用分页'],['queries/{id}/file-changes','FileChangePage','请求文件操作分页'],['models','ModelRowList','模型统计'],['code','CodeRowList','代码统计'],['health','HealthSummary','采集健康']])

@@ -73,6 +73,16 @@ HTTP 200 只代表对应列表中的事件已处理；不能直接删整个批�
 2. 本机生成 installation_id、registration_id、credential_id 和 32 字节 secret，先用 Electron safeStorage/Windows DPAPI 保存。注册请求携带该材料；secret 只走 TLS，服务端只存带 pepper 的哈希。
 3. 注册响应不包含设备 secret，因此响应丢失也不会丢密钥；同 registration_id + 相同请求返回原结果、不重复消费注册次数。重试身份验证先查既有注册并匹配其内容/设备密钥，再处理 bootstrap 已到期场景；不能允许不同数据占用旧 registration_id。
 4. 设备凭证 90 天；剩余 <=7 天触发轮换。新 secret 先本地保存 pending，再调用 rotate；rotation_id 唯一，响应丢失可用旧/新凭证请求相同轮换结果。
-5. 旧凭证过渡 24 小时，新凭证确认后启用；90 天彻底离线失效的设备需要管理员重新下发注册流程，不自动使用无效 bootstrap。
+5. 旧凭证过渡 24 小时，新凭证确认后启用；彻底离线至自然过期的设备可通过下述恢复接口保留原安装身份；Piora 客户端调用尚待接入。
 
 注册并发需锁 enrollment key 行；次数达到上限或已撤销时不能新注册。凭证撤销/换组织不合并旧安装历史。用户名只在注册作为线索保存；后续更名由管理员备注/重新绑定确认，不用改名自动合并员工。
+
+### 自然过期恢复
+
+POST /v1/installations/credentials/recover 使用 Bearer enrollment 接入凭证，Idempotency-Key 必须等于 recovery_id。请求包含 installation_id、previous_credential（原设备 ID 与 secret）和 next_credential（客户端预先持久保存的新 ID 与 secret）。成功返回原 installation_id、新 credential_id 和 expires_at（90 天）。
+
+只接受最后一份自然过期且未撤销的设备凭证，拒绝仍有效、被轮换替代、错误秘密、跨组织和已撤销设备。接入凭证必须有效且有剩余名额，成功消费一次名额；不新增安装，不修改员工绑定或历史。客户端不得清空本地安装身份来恢复。
+
+恢复事务按安装串行化。相同 recovery_id、请求及接入授权重放原结果，即使名额已用尽也不再次消费；更改内容返回 409 IDEMPOTENCY_CONFLICT。设备或相关设备凭证已撤销时拒绝重放。原凭证不延期，旧恢复响应也不延期；已有新凭证时不同恢复请求被拒绝。恢复成功但响应丢失时重试原请求，再持久确认新凭证。无效接入授权返回 ENROLLMENT_INVALID，设备撤销返回 INSTALLATION_REVOKED，非自然过期恢复返回 CREDENTIAL_RECOVERY_NOT_ALLOWED。
+
+本接口为服务端能力。当前 Piora 客户端尚未自动调用，更新接入凭证本身不会触发恢复。

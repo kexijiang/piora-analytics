@@ -141,6 +141,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/installations/credentials/recover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 恢复自然过期的设备凭证 */
+        post: operations["recoverCredential"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/installations/credentials/rotate": {
         parameters: {
             query?: never;
@@ -1206,6 +1223,37 @@ export interface components {
              */
             credential_expires_at: string;
             policy: components["schemas"]["SyncPolicy"];
+        };
+        RecoverInput: {
+            /**
+             * Format: uuid
+             * @description 稳定 UUID，不能使用用户名代替
+             */
+            recovery_id: string;
+            /**
+             * Format: uuid
+             * @description 稳定 UUID，不能使用用户名代替
+             */
+            installation_id: string;
+            previous_credential: components["schemas"]["CredentialMaterial"];
+            next_credential: components["schemas"]["CredentialMaterial"];
+        };
+        RecoverResult: {
+            /**
+             * Format: uuid
+             * @description 稳定 UUID，不能使用用户名代替
+             */
+            installation_id: string;
+            /**
+             * Format: uuid
+             * @description 稳定 UUID，不能使用用户名代替
+             */
+            credential_id: string;
+            /**
+             * Format: date-time
+             * @description 恢复后的设备凭证有效期；90 天
+             */
+            expires_at: string;
         };
         RotateInput: {
             /**
@@ -2406,6 +2454,10 @@ export interface components {
         };
         registerInstallationResponse: {
             data: components["schemas"]["RegisterResult"];
+            meta: components["schemas"]["Meta"];
+        };
+        recoverCredentialResponse: {
+            data: components["schemas"]["RecoverResult"];
             meta: components["schemas"]["Meta"];
         };
         rotateCredentialResponse: {
@@ -3681,6 +3733,144 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["registerInstallationResponse"];
+                };
+            };
+            /** @description 参数或协议格式错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 身份失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 权限不足或安装已撤销 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 资源不存在 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 版本/幂等/有效期冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 请求体过大 */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 业务规则或查询保留范围不满足 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 限流；遵守 Retry-After */
+            429: {
+                headers: {
+                    /** @description 整数秒；存在时优先于本地退避 */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description 依赖不可用；不得确认未持久事件 */
+            503: {
+                headers: {
+                    /** @description 整数秒；存在时优先于本地退避 */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    recoverCredential: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "recovery_id": "10000000-0000-4000-8000-000000000001",
+                 *       "installation_id": "10000000-0000-4000-8000-000000000001",
+                 *       "previous_credential": {
+                 *         "credential_id": "10000000-0000-4000-8000-000000000001",
+                 *         "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                 *       },
+                 *       "next_credential": {
+                 *         "credential_id": "10000000-0000-4000-8000-000000000001",
+                 *         "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                 *       }
+                 *     }
+                 */
+                "application/json": components["schemas"]["RecoverInput"];
+            };
+        };
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "data": {
+                     *         "installation_id": "10000000-0000-4000-8000-000000000001",
+                     *         "credential_id": "10000000-0000-4000-8000-000000000001",
+                     *         "expires_at": "2026-11-13T02:00:00.000Z"
+                     *       },
+                     *       "meta": {
+                     *         "request_id": "10000000-0000-4000-8000-000000000001",
+                     *         "server_time": "2026-11-13T02:00:00.000Z"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["recoverCredentialResponse"];
                 };
             };
             /** @description 参数或协议格式错误 */

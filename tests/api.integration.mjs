@@ -852,6 +852,131 @@ try {
   assert.equal((await call("GET", "/v1/admin/employees?search=" + encodeURIComponent("员工合成25"))).json().data.total, "1");
   assert.equal((await call("GET", "/v1/admin/employees?search=missing-staff")).json().data.total, "0");
   await call("GET", "/v1/admin/employees?limit=20&search=other&cursor=" + employeeCursor, undefined, 400);
+  // Dedicated recovery installation avoids changing the report fixtures above.
+  const recoveryRegistration = {
+    ...registration,
+    registration_id: uuid(),
+    installation_id: uuid(),
+    credential: { credential_id: uuid(), secret: "R".repeat(43) },
+  };
+  const recoveryKey = uuid(),
+    recoverySecret = "recovery-fixture";
+  const { secretHash } = await import("../apps/api/src/core.mjs");
+  await db.pool.query(
+    "INSERT INTO enrollment_keys(id,org_id,label,secret_hash,expires_at,max_registrations) VALUES($1,$2,'Recovery fixture',$3,now()+interval '1 day',2)",
+    [recoveryKey, org, secretHash(recoverySecret, config.pepper)],
+  );
+  const authorization = `Bearer enroll.${recoveryKey}.${recoverySecret}`;
+  await call("POST", "/v1/installations/register", recoveryRegistration, 201, {
+    authorization,
+    "idempotency-key": recoveryRegistration.registration_id,
+  });
+  const recovery = {
+    recovery_id: uuid(),
+    installation_id: recoveryRegistration.installation_id,
+    previous_credential: recoveryRegistration.credential,
+    next_credential: { credential_id: uuid(), secret: "S".repeat(43) },
+  };
+  const recoveryHeaders = {
+    authorization,
+    "idempotency-key": recovery.recovery_id,
+  };
+  const recoverPath = "/v1/installations/credentials/recover";
+  await call("POST", recoverPath, recovery, 409, recoveryHeaders);
+  await db.pool.query(
+    "UPDATE installation_credentials SET expires_at=now()-interval '1 day',valid_until=now()-interval '1 day' WHERE id=$1",
+    [recovery.previous_credential.credential_id],
+  );
+  await call(
+    "POST",
+    recoverPath,
+    {
+      ...recovery,
+      previous_credential: {
+        ...recovery.previous_credential,
+        secret: "X".repeat(43),
+      },
+    },
+    401,
+    recoveryHeaders,
+  );
+  await call("POST", recoverPath, recovery, 403, {
+    ...recoveryHeaders,
+    authorization: "Bearer " + revocable.secret,
+  });
+  await db.pool.query("UPDATE installation_credentials SET revoked_at=now() WHERE id=$1", [recovery.previous_credential.credential_id]);
+  await call("POST", recoverPath, recovery, 403, recoveryHeaders);
+  await db.pool.query("UPDATE installation_credentials SET revoked_at=NULL WHERE id=$1", [recovery.previous_credential.credential_id]);
+  const foreignServer = await createServer(db.pool, {...config, org: uuid()});
+  try {
+    const foreignResponse = await foreignServer.inject({method: "POST", url: recoverPath, payload: recovery, headers: recoveryHeaders});
+    assert.equal(foreignResponse.statusCode, 401);
+  } finally { await foreignServer.close(); }
+  const installationsBefore = (await db.pool.query("SELECT count(*) FROM installations")).rows[0].count;
+  const responses = await Promise.all([
+    call("POST", recoverPath, recovery, 200, recoveryHeaders),
+    call("POST", recoverPath, recovery, 200, recoveryHeaders),
+  ]);
+  assert.deepEqual(responses[0].json().data, responses[1].json().data);
+  assert.equal((await db.pool.query("SELECT count(*) FROM installations")).rows[0].count, installationsBefore);
+  assert.equal(
+    responses[0].json().data.installation_id,
+    recovery.installation_id,
+  );
+  assert.equal(
+    (
+      await db.pool.query(
+        "SELECT used_registrations FROM enrollment_keys WHERE id=$1",
+        [recoveryKey],
+      )
+    ).rows[0].used_registrations,
+    2,
+  );
+  await call(
+    "POST",
+    recoverPath,
+    {
+      ...recovery,
+      next_credential: { credential_id: uuid(), secret: "T".repeat(43) },
+    },
+    409,
+    recoveryHeaders,
+  );
+  const retryId = uuid();
+  await call("POST", recoverPath, { ...recovery, recovery_id: retryId }, 409, {
+    ...recoveryHeaders,
+    "idempotency-key": retryId,
+  });
+  await call(
+    "POST",
+    "/v1/installations/credentials/rotate",
+    {
+      rotation_id: uuid(),
+      next_credential: { credential_id: uuid(), secret: "U".repeat(43) },
+    },
+    401,
+    {
+      authorization: `Bearer pa1.${recovery.previous_credential.credential_id}.${recovery.previous_credential.secret}`,
+    },
+  );
+  const rotationId = uuid();
+  await call(
+    "POST",
+    "/v1/installations/credentials/rotate",
+    {
+      rotation_id: rotationId,
+      next_credential: { credential_id: uuid(), secret: "V".repeat(43) },
+    },
+    200,
+    {
+      authorization: `Bearer pa1.${recovery.next_credential.credential_id}.${recovery.next_credential.secret}`,
+      "idempotency-key": rotationId,
+    },
+  );
+  await db.pool.query("UPDATE installations SET status='revoked' WHERE id=$1", [
+    recovery.installation_id,
+  ]);
+  await call("POST", recoverPath, recovery, 403, recoveryHeaders);
   console.log(
     "HTTP + PostgreSQL integration passed: authentication/RBAC, registration replay, binding, ingest/dedup/rejection, aggregation, all reports, CSV export, credential rotation.",
   );

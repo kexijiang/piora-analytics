@@ -1142,6 +1142,60 @@
         "policy"
       ]
     },
+    "RecoverInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "recovery_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "稳定 UUID，不能使用用户名代替"
+        },
+        "installation_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "稳定 UUID，不能使用用户名代替"
+        },
+        "previous_credential": {
+          "$ref": "#/$defs/CredentialMaterial"
+        },
+        "next_credential": {
+          "$ref": "#/$defs/CredentialMaterial"
+        }
+      },
+      "required": [
+        "recovery_id",
+        "installation_id",
+        "previous_credential",
+        "next_credential"
+      ]
+    },
+    "RecoverResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "installation_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "稳定 UUID，不能使用用户名代替"
+        },
+        "credential_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "稳定 UUID，不能使用用户名代替"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "恢复后的设备凭证有效期；90 天"
+        }
+      },
+      "required": [
+        "installation_id",
+        "credential_id",
+        "expires_at"
+      ]
+    },
     "RotateInput": {
       "type": "object",
       "additionalProperties": false,
@@ -4969,6 +5023,22 @@
       "properties": {
         "data": {
           "$ref": "#/$defs/RegisterResult"
+        },
+        "meta": {
+          "$ref": "#/$defs/Meta"
+        }
+      },
+      "required": [
+        "data",
+        "meta"
+      ]
+    },
+    "recoverCredentialResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "$ref": "#/$defs/RecoverResult"
         },
         "meta": {
           "$ref": "#/$defs/Meta"

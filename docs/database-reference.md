@@ -201,7 +201,8 @@ Windows 安装实例，用户名仅供匹配。
 | id | uuid | PRIMARY KEY | 业务 UUID |
 | org_id | uuid | NOT NULL REFERENCES organizations(id) | 组织隔离键 |
 | installation_id | uuid | NOT NULL | 安装 |
-| rotation_id | uuid | NOT NULL | 轮换请求幂等键 |
+| rotation_id | uuid | NOT NULL | 轮换或恢复请求幂等键 |
+| recovery_hash | bytea | 可空 | 恢复请求及接入授权摘要；非恢复凭证为空 |
 | secret_hash | bytea | NOT NULL | 带服务端 pepper 的 HMAC-SHA256 |
 | expires_at | timestamptz | NOT NULL | 绝对过期 |
 | valid_until | timestamptz | NOT NULL | 被替换后最多再有效 24 小时 |

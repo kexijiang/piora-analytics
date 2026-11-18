@@ -224,6 +224,37 @@
     }
   },
   {
+    "name": "recoverCredential request",
+    "schema": "RecoverInput",
+    "value": {
+      "recovery_id": "10000000-0000-4000-8000-000000000001",
+      "installation_id": "10000000-0000-4000-8000-000000000001",
+      "previous_credential": {
+        "credential_id": "10000000-0000-4000-8000-000000000001",
+        "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "next_credential": {
+        "credential_id": "10000000-0000-4000-8000-000000000001",
+        "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      }
+    }
+  },
+  {
+    "name": "recoverCredential response",
+    "schema": "recoverCredentialResponse",
+    "value": {
+      "data": {
+        "installation_id": "10000000-0000-4000-8000-000000000001",
+        "credential_id": "10000000-0000-4000-8000-000000000001",
+        "expires_at": "2026-11-13T02:00:00.000Z"
+      },
+      "meta": {
+        "request_id": "10000000-0000-4000-8000-000000000001",
+        "server_time": "2026-11-13T02:00:00.000Z"
+      }
+    }
+  },
+  {
     "name": "rotateCredential request",
     "schema": "RotateInput",
     "value": {
