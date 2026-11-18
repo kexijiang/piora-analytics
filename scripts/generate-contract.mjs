@@ -39,13 +39,13 @@ add('EmployeeInput',{name:str('员工显示名',120),employee_no:nil(str('工号
 add('EmployeeUpdate',{name:str('员工显示名',120),employee_no:nil(str('工号',64)),department_id:nil(uuid('部门 ID')),effective_from:date('部门调整生效日；北京时间'),expected_revision:integer('版本')});
 add('RevisionInput',{expected_revision:integer('版本'),reason:str('操作原因',500)});
 add('CredentialMaterial',{credential_id:id,secret:{type:'string',minLength:43,maxLength:43,pattern:'^[A-Za-z0-9_-]{43}$',description:'客户端生成的 32 随机字节 base64url；注册前使用 DPAPI 保存；仅认证接口可携带',writeOnly:true}});
-add('WindowsIdentity',{account_type:en(['domain','local','unknown'],'客户端报告的账号类型，不是身份认证'),domain:nil(str('域名；本地或未知时为空',128)),account_name:nil(str('域登录名，不能用显示名或目录猜测',128)),source:en(['windows_logon','unavailable'],'采集来源')});
+add('WindowsIdentity',{account_type:en(['domain','local','unknown'],'客户端报告的账号类型，不是身份认证'),domain:nil(str('域名；本地或未知时为空',128)),account_name:nil(str('域登录名，不能用显示名或目录猜测',128)),source:en(['windows_logon','unavailable'],'采集来源'),display_name:str('域账号显示名，仅用于员工姓名',120)},['display_name']);
 add('IdentityRule',{domain:str('允许的域，大小写不敏感',128),format:en(['digits','alphanumeric'],'工号格式，保留前导零'),case:en(['preserve','upper','lower'],'登录名大小写归一化')});
 add('IdentityPolicy',{version:integer('版本'),enabled:flag('兼容字段，服务端固定为 true'),auto_create:flag('兼容字段，服务端固定为 true'),rules:list(ref('IdentityRule'),'兼容字段，服务端固定为空；所有域均按账号匹配工号',20)});
 add('IdentityPolicyUpdate',{policy:ref('IdentityPolicy'),expected_revision:integer('当前版本'),reason:str('修改原因',500)});
 add('IdentityResult',{identity:nil(ref('WindowsIdentity')),state:en(['missing','local','unknown','disabled','domain_not_allowed','invalid_account','employee_missing','employee_archived','identity_conflict','binding_preserved','matched'],'匹配结果'),employee_id:nil(id),binding_source:en(['none','manual','automatic'],'当前绑定来源')});
 add('IdentityUpdate',{identity:ref('WindowsIdentity')});
-add('ServerCapabilities',{capabilities:list(en(['windows-domain-identity-v1'],'服务端能力'),'能力列表',10)});
+add('ServerCapabilities',{capabilities:list(en(['windows-domain-identity-v1','windows-display-name-v1'],'服务端能力'),'能力列表',10)});
 add('RegisterInput',{registration_id:id,installation_id:id,credential:ref('CredentialMaterial'),windows_username:str('当前系统账号；不是员工 ID',128),device_label:str('设备显示名',128),app_version:str('Piora 版本',64),sdk_version:str('Pi SDK 版本',64),protocol_version:en(['1.0'],'协议版本'),capabilities:list(en(['desktop_activity','query','model_usage','file_write','file_edit'],'采集能力'),'客户端能力',20),windows_identity:ref('WindowsIdentity')},['windows_identity']);
 add('RegisterResult',{installation_id:id,status:en(['active','pending_identity'],'可上报；人员绑定待确认不阻止接收'),organization_name:str('组织显示名称',120),credential_id:id,credential_expires_at:time('凭证有效期；90 天'),policy:ref('SyncPolicy')});
 add('RotateInput',{rotation_id:id,next_credential:ref('CredentialMaterial')});

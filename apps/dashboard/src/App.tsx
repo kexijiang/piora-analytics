@@ -181,6 +181,16 @@ function downloadCSV(rows: S["DailyRow"][]) {
   URL.revokeObjectURL(u);
 }
 
+function employeeLabel(employee?: {
+  name: string;
+  employee_no: string | null;
+}) {
+  if (!employee) return "待确认";
+  return employee.employee_no
+    ? employee.name + "（" + employee.employee_no + "）"
+    : employee.name;
+}
+
 export default function App() {
   const [page, setPage] = useState<Page>("overview"),
     [dark, setDark] = useState(
@@ -1474,7 +1484,9 @@ export default function App() {
                     <div className="panel-heading">
                       <div>
                         <h2>安装实例与同步状态</h2>
-                        <p>域账号和本地账号自动关联员工；身份冲突可由管理员纠错</p>
+                        <p>
+                          域账号和本地账号自动关联员工；身份冲突可由管理员纠错
+                        </p>
                       </div>
                       <span className="pill">
                         {appliedPolicy
@@ -1509,9 +1521,11 @@ export default function App() {
                                 </small>
                               </td>
                               <td>
-                                {catalog.employees.find(
-                                  (e) => e.id === i.employee_id,
-                                )?.name ?? "待确认"}
+                                {employeeLabel(
+                                  catalog.employees.find(
+                                    (e) => e.id === i.employee_id,
+                                  ),
+                                )}
                               </td>
                               <td>
                                 <span className="version-chip">
@@ -1545,7 +1559,10 @@ export default function App() {
                                     i.identity_status?.binding_source ?? "",
                                   )
                                     ? " · 自动关联"
-                                    : ""}
+                                    : i.identity_status?.binding_source ===
+                                        "manual"
+                                      ? " · 人工绑定"
+                                      : ""}
                                 </div>
                                 {i.identity_status?.identity?.domain && (
                                   <div className="muted">

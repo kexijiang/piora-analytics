@@ -1098,6 +1098,8 @@ export interface components {
              * @enum {string}
              */
             source: "windows_logon" | "unavailable";
+            /** @description 域账号显示名，仅用于员工姓名 */
+            display_name?: string;
         };
         IdentityRule: {
             /** @description 允许的域，大小写不敏感 */
@@ -1149,7 +1151,7 @@ export interface components {
         };
         ServerCapabilities: {
             /** @description 能力列表 */
-            capabilities: "windows-domain-identity-v1"[];
+            capabilities: ("windows-domain-identity-v1" | "windows-display-name-v1")[];
         };
         RegisterInput: {
             /**
