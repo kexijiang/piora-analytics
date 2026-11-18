@@ -21,7 +21,7 @@ import {
   clean,
 } from "./core.mjs";
 import { authenticate, authOperation, passwordHash } from "./auth.mjs";
-import { register, rotate, ingest } from "./ingest.mjs";
+import { register, rotate, recover, ingest } from "./ingest.mjs";
 import { adminOperation } from "./admin.mjs";
 import { report } from "./reports.mjs";
 import { exportOperation } from "./exports.mjs";
@@ -250,6 +250,8 @@ export async function createServer(pool, config) {
               );
             else if (id === "registerInstallation")
               body = await register(c, req.body, req, config);
+            else if (id === "recoverCredential")
+              body = await recover(c, req.body, req, config);
             else if (id === "updateIdentity")
               body = await matchIdentity(c, req.body.identity, ctx);
             else if (id === "rotateCredential")

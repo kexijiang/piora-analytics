@@ -332,6 +332,49 @@
 
 错误：400 参数错误；401 凭证失效；403 权限不足；404 不存在；409 冲突；413 超限；422 业务条件不满足；429 限流；503 不可用。统一 ErrorResponse；发生条件及重试动作见 api-behavior.md。
 
+## POST /v1/installations/credentials/recover
+
+恢复自然过期的设备凭证。operationId: recoverCredential；最低角色：enrollment。
+
+| 参数 | 位置 | 类型 | 必填 | 说明 |
+|---|---|---|---|---|
+| Idempotency-Key | header | string | true | 一次操作一个键；重试保持不变，24 小时内相同键不同内容为冲突 |
+
+请求体：RecoverInput
+
+~~~json
+{
+  "recovery_id": "10000000-0000-4000-8000-000000000001",
+  "installation_id": "10000000-0000-4000-8000-000000000001",
+  "previous_credential": {
+    "credential_id": "10000000-0000-4000-8000-000000000001",
+    "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  "next_credential": {
+    "credential_id": "10000000-0000-4000-8000-000000000001",
+    "secret": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  }
+}
+~~~
+
+成功：HTTP 200，recoverCredentialResponse。
+
+~~~json
+{
+  "data": {
+    "installation_id": "10000000-0000-4000-8000-000000000001",
+    "credential_id": "10000000-0000-4000-8000-000000000001",
+    "expires_at": "2026-11-13T02:00:00.000Z"
+  },
+  "meta": {
+    "request_id": "10000000-0000-4000-8000-000000000001",
+    "server_time": "2026-11-13T02:00:00.000Z"
+  }
+}
+~~~
+
+错误：400 参数错误；401 凭证失效；403 权限不足；404 不存在；409 冲突；413 超限；422 业务条件不满足；429 限流；503 不可用。统一 ErrorResponse；发生条件及重试动作见 api-behavior.md。
+
 ## POST /v1/installations/credentials/rotate
 
 轮换安装凭证。operationId: rotateCredential；最低角色：device。
@@ -2418,6 +2461,23 @@
 | credential_expires_at | string | true | {"format":"date-time"} | 凭证有效期；90 天 |
 | policy | SyncPolicy | true | {} | 见引用对象 |
 
+## RecoverInput
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| recovery_id | string | true | {"format":"uuid"} | 稳定 UUID，不能使用用户名代替 |
+| installation_id | string | true | {"format":"uuid"} | 稳定 UUID，不能使用用户名代替 |
+| previous_credential | CredentialMaterial | true | {} | 见引用对象 |
+| next_credential | CredentialMaterial | true | {} | 见引用对象 |
+
+## RecoverResult
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| installation_id | string | true | {"format":"uuid"} | 稳定 UUID，不能使用用户名代替 |
+| credential_id | string | true | {"format":"uuid"} | 稳定 UUID，不能使用用户名代替 |
+| expires_at | string | true | {"format":"date-time"} | 恢复后的设备凭证有效期；90 天 |
+
 ## RotateInput
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
@@ -3191,6 +3251,13 @@ DesktopStartedEvent | DesktopOpenedEvent | DesktopActivityEvent | QuerySubmitted
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 |---|---|---|---|---|
 | data | RegisterResult | true | {} | 见引用对象 |
+| meta | Meta | true | {} | 见引用对象 |
+
+## recoverCredentialResponse
+
+| 字段 | 类型 | 必填 | 约束 | 说明 |
+|---|---|---|---|---|
+| data | RecoverResult | true | {} | 见引用对象 |
 | meta | Meta | true | {} | 见引用对象 |
 
 ## rotateCredentialResponse

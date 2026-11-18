@@ -219,6 +219,7 @@ CREATE TABLE installation_credentials (
   org_id uuid NOT NULL REFERENCES organizations(id),
   installation_id uuid NOT NULL,
   rotation_id uuid NOT NULL,
+  recovery_hash bytea,
   secret_hash bytea NOT NULL,
   expires_at timestamptz NOT NULL,
   valid_until timestamptz NOT NULL,
@@ -232,7 +233,8 @@ COMMENT ON TABLE installation_credentials IS '安装鉴权凭证，轮换时双�
 COMMENT ON COLUMN installation_credentials.id IS '业务 UUID';
 COMMENT ON COLUMN installation_credentials.org_id IS '组织隔离键';
 COMMENT ON COLUMN installation_credentials.installation_id IS '安装';
-COMMENT ON COLUMN installation_credentials.rotation_id IS '轮换请求幂等键';
+COMMENT ON COLUMN installation_credentials.rotation_id IS '轮换或恢复请求幂等键';
+COMMENT ON COLUMN installation_credentials.recovery_hash IS '恢复请求及接入授权摘要；非恢复凭证为空';
 COMMENT ON COLUMN installation_credentials.secret_hash IS '带服务端 pepper 的 HMAC-SHA256';
 COMMENT ON COLUMN installation_credentials.expires_at IS '绝对过期';
 COMMENT ON COLUMN installation_credentials.valid_until IS '被替换后最多再有效 24 小时';

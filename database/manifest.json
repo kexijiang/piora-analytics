@@ -48,7 +48,7 @@
     },
     {
       "name": "installation_credentials",
-      "columns": 9,
+      "columns": 10,
       "description": "安装鉴权凭证，轮换时双凭证过渡"
     },
     {
