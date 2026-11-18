@@ -57,6 +57,7 @@ jobs:
           sudo chmod 750 "$CONFIG_DIR" "$EXPORT_DATA_DIR"
           sudo chmod 640 "$CONFIG_DIR/.env"
           trap 'docker compose --env-file "$CONFIG_DIR/.env" down' EXIT
+          docker compose --env-file "$CONFIG_DIR/.env" pull database
           bash scripts/start.sh offline
           curl --fail http://127.0.0.1:4319/health/ready
           node scripts/smoke-compose.mjs
