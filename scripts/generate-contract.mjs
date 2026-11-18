@@ -55,7 +55,7 @@ schemas.Installation.properties.identity_status=ref('IdentityResult');
 add('Binding',{id,installation_id:id,employee_id:id,valid_from:nil(date('包含；null 覆盖全部历史')),valid_to:nil(date('不包含；null 为持续')),reason:str('绑定/纠错原因',500),revision:integer('版本')});
 add('BindingInput',{employee_id:id,valid_from:nil(date('包含；北京时间自然日；null 覆盖全部历史')),valid_to:nil(date('不包含')),reason:str('原因',500),expected_revision:integer('安装/原绑定版本')});
 add('EnrollmentKey',{id,label:str('用途',120),expires_at:time('过期时间'),max_registrations:{...integer('最多允许注册次数',5000),minimum:1},used_registrations:integer('已注册次数'),revoked_at:nil(time('撤销时间')),revision:integer('乐观锁版本')});
-add('EnrollmentInput',{label:str('用途',120),expires_at:time('过期时间；最多 30 天'),max_registrations:{...integer('最多允许注册次数',5000),minimum:1}});
+add('EnrollmentInput',{label:str('用途',120),expires_at:time('过期时间；必须晚于当前时间，不设业务期限上限'),max_registrations:{...integer('最多允许注册次数',5000),minimum:1}});
 add('EnrollmentCreated',{key:ref('EnrollmentKey'),secret:str('只在本次响应展示；部署时通过安全配置分发',128)});
 add('AdminCreate',{username:str('唯一后台账号',80),display_name:str('显示名',120),role:en(['admin','viewer'],'角色'),temporary_password:{...str('临时密码，首次登录强制修改',256),minLength:12,writeOnly:true}});
 add('AdminUpdate',{display_name:str('显示名',120),role:en(['admin','viewer'],'角色'),status:en(['active','disabled'],'状态'),expected_revision:integer('版本')});

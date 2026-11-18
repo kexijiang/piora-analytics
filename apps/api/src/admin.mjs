@@ -346,8 +346,8 @@ export async function adminOperation(c, id, b, q, p, ctx) {
     );
   if (id === "createEnrollment") {
     if (
-      Date.parse(b.expires_at) <= Date.now() ||
-      Date.parse(b.expires_at) > Date.now() + 30 * 86400000
+      !Number.isFinite(Date.parse(b.expires_at)) ||
+      Date.parse(b.expires_at) <= Date.now()
     )
       throw new ApiError(422, "POLICY_INVALID");
     const key = uuid(),

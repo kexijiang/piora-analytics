@@ -114,7 +114,7 @@ test("真实浏览器登录、Cookie/CSRF、组织管理与报表 API", async ({
       .getByRole("button", { name: "创建接入凭证", exact: true })
       .click();
     await page.getByLabel("用途名称", {exact: true}).fill("浏览器合成凭证");
-    await page.getByLabel("有效期（天）").fill("2");
+    await page.getByLabel("有效期（天）").fill("365");
     await page.getByLabel("允许注册次数", { exact: true }).fill("3");
     await page.getByRole("button", { name: "创建", exact: true }).click();
     const secretDialog = page.getByRole("dialog", { name: "保存接入凭证" });

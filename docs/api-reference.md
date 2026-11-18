@@ -2489,7 +2489,7 @@
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 |---|---|---|---|---|
 | label | string | true | {"minLength":1,"maxLength":120} | 用途 |
-| expires_at | string | true | {"format":"date-time"} | 过期时间；最多 30 天 |
+| expires_at | string | true | {"format":"date-time"} | 过期时间；必须晚于当前时间，不设业务期限上限 |
 | max_registrations | integer | true | {"minimum":1,"maximum":5000} | 最多允许注册次数 |
 
 ## EnrollmentCreated
