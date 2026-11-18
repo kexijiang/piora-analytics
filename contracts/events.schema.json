@@ -813,6 +813,12 @@
             "unavailable"
           ],
           "description": "采集来源"
+        },
+        "display_name": {
+          "type": "string",
+          "description": "域账号显示名，仅用于员工姓名",
+          "minLength": 1,
+          "maxLength": 120
         }
       },
       "required": [
@@ -997,7 +1003,8 @@
           "items": {
             "type": "string",
             "enum": [
-              "windows-domain-identity-v1"
+              "windows-domain-identity-v1",
+              "windows-display-name-v1"
             ],
             "description": "服务端能力"
           },

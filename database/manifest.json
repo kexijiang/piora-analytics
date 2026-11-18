@@ -13,7 +13,7 @@
     },
     {
       "name": "employees",
-      "columns": 7,
+      "columns": 8,
       "description": "管理员确认的人员；用户名不作为主键"
     },
     {

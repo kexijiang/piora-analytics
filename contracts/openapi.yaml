@@ -7648,6 +7648,11 @@ components:
             - windows_logon
             - unavailable
           description: 采集来源
+        display_name:
+          type: string
+          description: 域账号显示名，仅用于员工姓名
+          minLength: 1
+          maxLength: 120
       required:
         - account_type
         - domain
@@ -7782,6 +7787,7 @@ components:
             type: string
             enum:
               - windows-domain-identity-v1
+              - windows-display-name-v1
             description: 服务端能力
           description: 能力列表
           maxItems: 10

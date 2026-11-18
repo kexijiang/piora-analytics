@@ -45,6 +45,7 @@ v1 单组织，结构保留租户隔离。
 | org_id | uuid | NOT NULL REFERENCES organizations(id) | 组织隔离键 |
 | name | varchar(120) | NOT NULL | 显示名 |
 | employee_no | varchar(64) | 可空 | 可选工号 |
+| name_is_placeholder | boolean | NOT NULL DEFAULT false | 姓名为自动创建的工号占位 |
 | status | text | NOT NULL DEFAULT 'active' CHECK (status IN ('active','archived')) | 状态 |
 | revision | integer | NOT NULL DEFAULT 1 CHECK (revision > 0) | 乐观锁版本 |
 | created_at | timestamptz | NOT NULL DEFAULT now() | 创建时间 |

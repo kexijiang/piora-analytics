@@ -57,7 +57,7 @@ try {
   csrf = login.json().data.csrf_token;
   assert.deepEqual(
     (await call("GET", "/v1/capabilities")).json().data.capabilities,
-    ["windows-domain-identity-v1"],
+    ["windows-domain-identity-v1", "windows-display-name-v1"],
   );
   let policy = (await call("GET", "/v1/admin/settings/identity")).json().data;
   async function setPolicy(p, status = 200) {
@@ -167,6 +167,18 @@ try {
         )
       ).rows[0].count,
     );
+  const named = { ...identity(), display_name: "林小明 Li" };
+  await report(a, named);
+  const employeeName = async () =>
+    (
+      await db.pool.query("SELECT name FROM employees WHERE id=$1", [
+        employee.id,
+      ])
+    ).rows[0].name;
+  assert.equal(await employeeName(), named.display_name);
+  await report(a, { ...named, display_name: "Changed" });
+  assert.equal(await employeeName(), named.display_name);
+  await report(a, identity());
   const beforeRepeat = await auditCount();
   await Promise.all([report(a, identity()), report(a, identity())]);
   assert.equal(

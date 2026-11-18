@@ -174,7 +174,7 @@ export async function createServer(pool, config) {
             .at(-1);
           if (requestSchema && id !== "ingestBatch")
             validate(requestSchema, req.body);
-          if (id === "serverCapabilities") return {data: {capabilities: ["windows-domain-identity-v1"]}, meta: {request_id:req.id,server_time:iso()}};
+          if (id === "serverCapabilities") return {data: {capabilities: ["windows-domain-identity-v1", "windows-display-name-v1"]}, meta: {request_id:req.id,server_time:iso()}};
           if (id === "liveness")
             return {
               data: { status: "ok" },

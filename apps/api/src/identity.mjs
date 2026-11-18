@@ -152,11 +152,18 @@ export async function matchIdentity(c, claim, ctx) {
   )
     return finish("identity_conflict");
   if (employee?.status === "archived") return finish("employee_archived");
+  const displayName = domainAccount ? claim.display_name?.trim() : undefined;
+  if (employee?.name_is_placeholder && displayName) {
+    await c.query(
+      "UPDATE employees SET name=$3,name_is_placeholder=false,revision=revision+1 WHERE org_id=$1 AND id=$2",
+      [ctx.org, employee.id, displayName],
+    );
+  }
   if (!employee) {
     employee = (
       await c.query(
-        "INSERT INTO employees(id,org_id,name,employee_no) VALUES($1,$2,$3,$3) ON CONFLICT(org_id,employee_no) DO NOTHING RETURNING *",
-        [uuid(), ctx.org, employeeNo],
+        "INSERT INTO employees(id,org_id,name,employee_no,name_is_placeholder) VALUES($1,$2,$3,$4,$5) ON CONFLICT(org_id,employee_no) DO NOTHING RETURNING *",
+        [uuid(), ctx.org, displayName || employeeNo, employeeNo, !displayName],
       )
     ).rows[0];
     if (!employee) return finish("identity_conflict");
