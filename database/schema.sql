@@ -37,6 +37,7 @@ CREATE TABLE employees (
   org_id uuid NOT NULL REFERENCES organizations(id),
   name varchar(120) NOT NULL,
   employee_no varchar(64),
+  name_is_placeholder boolean NOT NULL DEFAULT false,
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','archived')),
   revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -48,6 +49,7 @@ COMMENT ON COLUMN employees.id IS '业务 UUID';
 COMMENT ON COLUMN employees.org_id IS '组织隔离键';
 COMMENT ON COLUMN employees.name IS '显示名';
 COMMENT ON COLUMN employees.employee_no IS '可选工号';
+COMMENT ON COLUMN employees.name_is_placeholder IS '姓名为自动创建的工号占位';
 COMMENT ON COLUMN employees.status IS '状态';
 COMMENT ON COLUMN employees.revision IS '乐观锁版本';
 COMMENT ON COLUMN employees.created_at IS '创建时间';

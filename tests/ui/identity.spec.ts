@@ -70,6 +70,7 @@ test("unbound device statistics, empty employee guidance and domain auto matchin
           account_type: "domain",
           domain: "CHINA",
           account_name: "001234",
+          display_name: "合成姓名 Li",
           source: "windows_logon",
         },
       },
@@ -96,13 +97,16 @@ test("unbound device statistics, empty employee guidance and domain auto matchin
     await page.getByRole("button", { name: /采集健康/ }).click();
     await expect(page.getByText("账号匹配成功 · 自动关联")).toBeVisible();
     await expect(
-      page.getByRole("table").getByText("001234", { exact: true }).first(),
+      page
+        .getByRole("table")
+        .getByText("合成姓名 Li（001234）", { exact: true })
+        .first(),
     ).toBeVisible();
     await page
       .getByRole("button", { name: "员工每日明细", exact: true })
       .click();
     await expect(
-      page.getByRole("table").getByText("001234", { exact: true }).first(),
+      page.getByRole("table").getByText("合成姓名 Li", { exact: true }).first(),
     ).toBeVisible();
     // An administrator can correct an automatic association in the browser.
     await page.getByRole("button", { name: "组织设置", exact: true }).click();

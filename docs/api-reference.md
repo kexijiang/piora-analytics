@@ -2345,6 +2345,7 @@
 | domain | string / null | true | {} | 域名；本地或未知时为空 |
 | account_name | string / null | true | {} | 域登录名，不能用显示名或目录猜测 |
 | source | string | true | {"enum":["windows_logon","unavailable"]} | 采集来源 |
+| display_name | string | false | {"minLength":1,"maxLength":120} | 域账号显示名，仅用于员工姓名 |
 
 ## IdentityRule
 
