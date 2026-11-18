@@ -261,13 +261,13 @@ export function EnrollmentKeys() {
                 !label.trim() ||
                 !Number.isInteger(days) ||
                 days < 1 ||
-                days > 30 ||
+                !Number.isFinite(new Date(Date.now() + days * 86400000).getTime()) ||
                 !Number.isInteger(limit) ||
                 limit < 1 ||
                 limit > 5000
               ) {
                 setFormError(
-                  "请填写用途，有效期为 1–30 天，注册次数为 1–5000 的整数。",
+                  "请填写用途，有效期须为正整数天且到期日期有效，注册次数为 1–5000 的整数。",
                 );
                 return;
               }
@@ -310,7 +310,6 @@ export function EnrollmentKeys() {
                 required
                 type="number"
                 min={1}
-                max={30}
                 step={1}
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
@@ -328,7 +327,7 @@ export function EnrollmentKeys() {
                 onChange={(e) => setLimit(Number(e.target.value))}
               />
             </label>
-            <p className="muted">有效期从创建时开始，最多 30 天。</p>
+            <p className="muted">有效期从创建时开始，可按需设置有效天数。</p>
             <button className="primary" disabled={busy} type="submit">
               {busy ? "正在创建…" : "创建"}
             </button>

@@ -1319,7 +1319,7 @@ export interface components {
             label: string;
             /**
              * Format: date-time
-             * @description 过期时间；最多 30 天
+             * @description 过期时间；必须晚于当前时间，不设业务期限上限
              */
             expires_at: string;
             /** @description 最多允许注册次数 */

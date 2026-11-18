@@ -103,7 +103,7 @@ try {
       "/v1/admin/enrollment-keys",
       {
         label: "自动测试",
-        expires_at: new Date(now + 86400000).toISOString(),
+        expires_at: new Date(now + 365 * 86400000).toISOString(),
         max_registrations: 2,
       },
       201,
