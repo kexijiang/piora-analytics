@@ -325,7 +325,7 @@ function demo(url: string, body: unknown, method: string): unknown {
     };
   } else if (p.endsWith("/employees")) {
     const filtered = data.employees.filter((employee) =>
-      (employee.name + " " + (employee.employee_no ?? ""))
+      ((employee.name ?? "") + " " + (employee.employee_no ?? ""))
         .toLowerCase()
         .includes((q.get("search") ?? "").trim().toLowerCase()),
     );

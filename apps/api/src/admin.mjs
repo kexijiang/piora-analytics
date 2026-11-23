@@ -85,7 +85,7 @@ export async function adminOperation(c, id, b, q, p, ctx) {
       (await employees(c, ctx.org)).filter(
         (r) =>
           !q.search ||
-          (r.name + " " + (r.employee_no ?? "")).toLowerCase().includes(q.search.trim().toLowerCase()),
+          ((r.name ?? "") + " " + (r.employee_no ?? "")).toLowerCase().includes(q.search.trim().toLowerCase()),
       ),
       q,
       ctx,
@@ -209,7 +209,7 @@ export async function adminOperation(c, id, b, q, p, ctx) {
       if (Date.parse(b.effective_from) < Date.now() - 731 * 86400000)
         throw new ApiError(422, "RANGE_OUT_OF_RETENTION");
       await c.query(
-        "UPDATE employees SET name=$3,name_is_placeholder=false,employee_no=$4,revision=revision+1 WHERE org_id=$1 AND id=$2",
+        "UPDATE employees SET name=$3,employee_no=$4,revision=revision+1 WHERE org_id=$1 AND id=$2",
         [ctx.org, p.id, b.name, b.employee_no],
       );
       await departmentChange(c, ctx, p.id, b.department_id, b.effective_from);

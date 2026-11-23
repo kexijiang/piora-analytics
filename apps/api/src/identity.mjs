@@ -102,19 +102,13 @@ export async function matchIdentity(c, claim, ctx) {
     return identityResult(c, ctx.org, ctx.installation);
   };
   if (installation.status === "revoked") return finish(old?.state ?? "missing");
-  // A domain identity must come from the explicit OS claim. Local/legacy clients
-  // may only have the registration username; never treat it as a verified domain.
-  if (claim?.account_type === "unknown") return finish("unknown");
-  const domainAccount = claim?.account_type === "domain";
-  const domain = domainAccount
-    ? (claim.domain ?? "").trim().toUpperCase()
-    : null;
-  const account = domainAccount
-    ? (claim.account_name ?? "")
-    : claim?.account_name || installation.windows_username;
+  if (claim.account_type === "unknown") return finish("unknown");
+  if (claim.account_type === "local") return finish("local");
+  const domain = (claim.domain ?? "").trim().toUpperCase();
+  const account = claim.account_name;
   if (
-    domainAccount &&
-    (claim.source !== "windows_logon" || !/^[A-Z0-9][A-Z0-9._-]*$/.test(domain))
+    claim.source !== "windows_logon" ||
+    !/^[A-Z0-9][A-Z0-9._-]*$/.test(domain)
   )
     return finish("invalid_account");
   // Employee numbers are opaque strings: preserve leading zeroes and spelling.
@@ -130,14 +124,12 @@ export async function matchIdentity(c, claim, ctx) {
   ).rows;
   if (bindings.some((b) => b.source === "manual"))
     return finish("binding_preserved");
-  const mapped = domainAccount
-    ? (
-        await c.query(
-          "SELECT e.* FROM employee_domain_accounts a JOIN employees e ON e.org_id=a.org_id AND e.id=a.employee_id WHERE a.org_id=$1 AND a.domain=$2 AND a.account_name=$3 FOR UPDATE OF e",
-          [ctx.org, domain, account],
-        )
-      ).rows[0]
-    : null;
+  const mapped = (
+    await c.query(
+      "SELECT e.* FROM employee_domain_accounts a JOIN employees e ON e.org_id=a.org_id AND e.id=a.employee_id WHERE a.org_id=$1 AND a.domain=$2 AND a.account_name=$3 FOR UPDATE OF e",
+      [ctx.org, domain, account],
+    )
+  ).rows[0];
   // Employee numbers are unique organization-wide, including across allowed domains.
   let employee = (
     await c.query(
@@ -152,18 +144,18 @@ export async function matchIdentity(c, claim, ctx) {
   )
     return finish("identity_conflict");
   if (employee?.status === "archived") return finish("employee_archived");
-  const displayName = domainAccount ? claim.display_name?.trim() : undefined;
-  if (employee?.name_is_placeholder && displayName) {
+  const displayName = claim.display_name?.trim();
+  if (employee && employee.name === null && displayName) {
     await c.query(
-      "UPDATE employees SET name=$3,name_is_placeholder=false,revision=revision+1 WHERE org_id=$1 AND id=$2",
+      "UPDATE employees SET name=$3,revision=revision+1 WHERE org_id=$1 AND id=$2",
       [ctx.org, employee.id, displayName],
     );
   }
   if (!employee) {
     employee = (
       await c.query(
-        "INSERT INTO employees(id,org_id,name,employee_no,name_is_placeholder) VALUES($1,$2,$3,$4,$5) ON CONFLICT(org_id,employee_no) DO NOTHING RETURNING *",
-        [uuid(), ctx.org, displayName || employeeNo, employeeNo, !displayName],
+        "INSERT INTO employees(id,org_id,name,employee_no) VALUES($1,$2,$3,$4) ON CONFLICT(org_id,employee_no) DO NOTHING RETURNING *",
+        [uuid(), ctx.org, displayName || null, employeeNo],
       )
     ).rows[0];
     if (!employee) return finish("identity_conflict");
@@ -176,7 +168,7 @@ export async function matchIdentity(c, claim, ctx) {
       "根据上报账号自动创建",
     );
   }
-  if (domainAccount && !mapped)
+  if (!mapped)
     await c.query(
       "INSERT INTO employee_domain_accounts(org_id,domain,account_name,employee_id) VALUES($1,$2,$3,$4)",
       [ctx.org, domain, account, employee.id],

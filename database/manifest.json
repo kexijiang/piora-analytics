@@ -13,8 +13,8 @@
     },
     {
       "name": "employees",
-      "columns": 8,
-      "description": "管理员确认的人员；用户名不作为主键"
+      "columns": 7,
+      "description": "通过域工号匹配或人工创建的员工"
     },
     {
       "name": "employee_department_periods",

@@ -37,15 +37,14 @@ v1 单组织，结构保留租户隔离。
 
 ## employees
 
-管理员确认的人员；用户名不作为主键。
+通过域工号匹配或人工创建的员工。
 
 | 字段 | PostgreSQL 类型 | SQL 约束/默认值 | 说明 |
 |---|---|---|---|
 | id | uuid | PRIMARY KEY | 业务 UUID |
 | org_id | uuid | NOT NULL REFERENCES organizations(id) | 组织隔离键 |
-| name | varchar(120) | NOT NULL | 显示名 |
+| name | varchar(120) | 可空 | 姓名；未知时为空 |
 | employee_no | varchar(64) | 可空 | 可选工号 |
-| name_is_placeholder | boolean | NOT NULL DEFAULT false | 姓名为自动创建的工号占位 |
 | status | text | NOT NULL DEFAULT 'active' CHECK (status IN ('active','archived')) | 状态 |
 | revision | integer | NOT NULL DEFAULT 1 CHECK (revision > 0) | 乐观锁版本 |
 | created_at | timestamptz | NOT NULL DEFAULT now() | 创建时间 |
@@ -54,6 +53,7 @@ v1 单组织，结构保留租户隔离。
 
 - UNIQUE (org_id,id)
 - UNIQUE (org_id,employee_no)
+- CHECK (name IS NOT NULL OR employee_no IS NOT NULL)
 
 ## employee_department_periods
 
@@ -678,7 +678,7 @@ Windows 安装实例，用户名仅供匹配。
 |---|---|---|---|
 | org_id | uuid | NOT NULL REFERENCES organizations(id) | 组织隔离键 |
 | installation_id | uuid | NOT NULL | 安装 |
-| claim | jsonb | NOT NULL | 最近报告的身份；JSON null 表示仅报告注册用户名 |
+| claim | jsonb | NOT NULL | 最近通过身份接口报告的身份 |
 | state | varchar(40) | NOT NULL | 最近匹配结果 |
 | updated_at | timestamptz | NOT NULL DEFAULT now() | 最近变化 |
 

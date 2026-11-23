@@ -141,11 +141,11 @@ docker compose --env-file "$CONFIG_DIR/.env" exec -T database pg_dump -U analyti
 
 ## 域账号自动归属
 
-初始化后即默认自动关联：域账号按登录工号，本地及未报告身份的客户端按注册账号匹配或创建员工，无需域规则或开关。人工归属优先保留。具体协议、历史事件归属及验证边界见[账号自动关联](domain-identity.md)。
+初始化后即默认自动关联：注册后补报域身份时按登录工号匹配或创建员工，本地及未报告身份的设备可人工绑定，无需域规则或开关。人工归属优先保留。具体协议、历史事件归属及验证边界见[账号自动关联](domain-identity.md)。
 
 ## 给 Windows Piora 分发配置
 
-1. 管理员生成有限次数、有限期限的 enrollment key。员工在设备接入时自动创建，姓名和部门可后续补充。
+1. 管理员生成有限次数、有限期限的 enrollment key。员工可在接入后补报域身份时自动创建，姓名和部门可后续补充。
 2. 企业配置工具写入每名用户实际 Pi 数据目录下的 `piora/telemetry/config.json`。默认是 `%USERPROFILE%\.pi\agent\piora\telemetry\config.json`；若通过客户端设置或 `PI_CODING_AGENT_DIR` 改过数据目录，应使用实际生效的目录。首次启动会创建 `enabled: false` 的默认配置，不覆盖企业预置内容；只有显式配置 `enabled: true` 和后端地址才开始采集、上传。首次注册还需 enrollment key：
 
 ~~~json

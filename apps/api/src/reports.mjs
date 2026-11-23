@@ -100,7 +100,7 @@ export async function loadReport(c, org, q) {
   const joins =
     " LEFT JOIN installation_bindings b ON b.org_id=m.org_id AND b.installation_id=m.installation_id AND b.valid_days @> m.day LEFT JOIN employees e ON e.org_id=b.org_id AND e.id=b.employee_id LEFT JOIN employee_department_periods ep ON ep.org_id=e.org_id AND ep.employee_id=e.id AND ep.valid_days @> m.day LEFT JOIN departments d ON d.org_id=ep.org_id AND d.id=ep.department_id";
   const select = (table) =>
-    "SELECT m.*,m.day::text AS date,e.id AS employee_id,e.name AS employee_name,d.id AS department_id,d.name AS department_name FROM " +
+    "SELECT m.*,m.day::text AS date,e.id AS employee_id,COALESCE(e.name,e.employee_no) AS employee_name,d.id AS department_id,d.name AS department_name FROM " +
     table +
     " m" +
     joins +
@@ -391,7 +391,7 @@ export async function report(c, id, q, params, ctx) {
     const existing = new Set(rows.map((r) => r.employee_id + "|" + r.date));
     const expected = (
       await c.query(
-        "SELECT e.id,e.name,day::date::text AS date,ep.department_id,d.name AS department_name,EXISTS(SELECT 1 FROM installation_bindings b WHERE b.org_id=e.org_id AND b.employee_id=e.id AND b.valid_days @> day::date) AS enrolled FROM employees e CROSS JOIN generate_series($2::date::timestamp,($3::date-1)::timestamp,interval '1 day') day LEFT JOIN employee_department_periods ep ON ep.org_id=e.org_id AND ep.employee_id=e.id AND ep.valid_days @> day::date LEFT JOIN departments d ON d.org_id=ep.org_id AND d.id=ep.department_id WHERE e.org_id=$1 AND e.status='active'",
+        "SELECT e.id,COALESCE(e.name,e.employee_no) AS name,day::date::text AS date,ep.department_id,d.name AS department_name,EXISTS(SELECT 1 FROM installation_bindings b WHERE b.org_id=e.org_id AND b.employee_id=e.id AND b.valid_days @> day::date) AS enrolled FROM employees e CROSS JOIN generate_series($2::date::timestamp,($3::date-1)::timestamp,interval '1 day') day LEFT JOIN employee_department_periods ep ON ep.org_id=e.org_id AND ep.employee_id=e.id AND ep.valid_days @> day::date LEFT JOIN departments d ON d.org_id=ep.org_id AND d.id=ep.department_id WHERE e.org_id=$1 AND e.status='active'",
         [ctx.org, q.from, q.to],
       )
     ).rows;
