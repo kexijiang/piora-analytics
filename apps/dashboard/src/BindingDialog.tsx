@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { employeeLabel } from "./employeeLabel";
 import { api, isDemo } from "./api";
 import type { components } from "../../../packages/contracts/src/api.generated";
 type S = components["schemas"];
@@ -141,8 +142,7 @@ export function BindingDialog({
                 {history.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.valid_from ?? "全部历史"} 至 {b.valid_to ?? "持续"} ·{" "}
-                    {employees.find((e) => e.id === b.employee_id)?.name ??
-                      b.employee_id}
+                    {employeeLabel(employees.find((e) => e.id === b.employee_id))}
                   </option>
                 ))}
               </select>
@@ -165,7 +165,7 @@ export function BindingDialog({
             >
               {employees.map((e) => (
                 <option key={e.id} value={e.id}>
-                  {e.name} · {e.employee_no}
+                  {[e.name, e.employee_no].filter(Boolean).join(" · ")}
                 </option>
               ))}
             </select>

@@ -564,10 +564,18 @@
           "description": "稳定 UUID，不能使用用户名代替"
         },
         "name": {
-          "type": "string",
-          "description": "员工显示名，允许重名",
-          "minLength": 1,
-          "maxLength": 120
+          "anyOf": [
+            {
+              "type": "string",
+              "description": "姓名；未知时展示工号",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "example": "示例姓名"
         },
         "employee_no": {
           "anyOf": [
@@ -630,10 +638,18 @@
       "additionalProperties": false,
       "properties": {
         "name": {
-          "type": "string",
-          "description": "员工显示名",
-          "minLength": 1,
-          "maxLength": 120
+          "anyOf": [
+            {
+              "type": "string",
+              "description": "姓名；未知时须提供工号",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "example": "示例姓名"
         },
         "employee_no": {
           "anyOf": [
@@ -665,6 +681,34 @@
         "name",
         "employee_no",
         "department_id"
+      ],
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "employee_no"
+              ],
+              "properties": {
+                "employee_no": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        }
       ]
     },
     "EmployeeUpdate": {
@@ -672,10 +716,18 @@
       "additionalProperties": false,
       "properties": {
         "name": {
-          "type": "string",
-          "description": "员工显示名",
-          "minLength": 1,
-          "maxLength": 120
+          "anyOf": [
+            {
+              "type": "string",
+              "description": "姓名；未知时须提供工号",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "example": "示例姓名"
         },
         "employee_no": {
           "anyOf": [
@@ -720,6 +772,34 @@
         "department_id",
         "effective_from",
         "expected_revision"
+      ],
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "employee_no"
+              ],
+              "properties": {
+                "employee_no": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        }
       ]
     },
     "RevisionInput": {
@@ -1081,7 +1161,8 @@
           "maxItems": 20
         },
         "windows_identity": {
-          "$ref": "#/$defs/WindowsIdentity"
+          "$ref": "#/$defs/WindowsIdentity",
+          "description": "兼容旧版注册载荷；员工匹配通过注册后的身份接口执行"
         }
       },
       "required": [

@@ -651,7 +651,7 @@
   "data": {
     "employee": {
       "id": "10000000-0000-4000-8000-000000000001",
-      "name": "示例值",
+      "name": "示例姓名",
       "employee_no": null,
       "department_id": null,
       "status": "active",
@@ -1122,7 +1122,7 @@
 
 ~~~json
 {
-  "name": "示例值",
+  "name": "示例姓名",
   "employee_no": null,
   "department_id": null
 }
@@ -1134,7 +1134,7 @@
 {
   "data": {
     "id": "10000000-0000-4000-8000-000000000001",
-    "name": "示例值",
+    "name": "示例姓名",
     "employee_no": null,
     "department_id": null,
     "status": "active",
@@ -1164,7 +1164,7 @@
 
 ~~~json
 {
-  "name": "示例值",
+  "name": "示例姓名",
   "employee_no": null,
   "department_id": null,
   "effective_from": "2026-11-13",
@@ -1178,7 +1178,7 @@
 {
   "data": {
     "id": "10000000-0000-4000-8000-000000000001",
-    "name": "示例值",
+    "name": "示例姓名",
     "employee_no": null,
     "department_id": null,
     "status": "active",
@@ -2341,7 +2341,7 @@
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 |---|---|---|---|---|
 | id | string | true | {"format":"uuid"} | 稳定 UUID，不能使用用户名代替 |
-| name | string | true | {"minLength":1,"maxLength":120} | 员工显示名，允许重名 |
+| name | string / null | true | {} | 姓名；未知时展示工号 |
 | employee_no | string / null | true | {} | 可选工号；非空时组织内唯一 |
 | department_id | string / null | true | {} | 当前部门 |
 | status | string | true | {"enum":["active","archived"]} | 状态 |
@@ -2352,7 +2352,7 @@
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 |---|---|---|---|---|
-| name | string | true | {"minLength":1,"maxLength":120} | 员工显示名 |
+| name | string / null | true | {} | 姓名；未知时须提供工号 |
 | employee_no | string / null | true | {} | 工号 |
 | department_id | string / null | true | {} | 部门 ID |
 
@@ -2360,7 +2360,7 @@
 
 | 字段 | 类型 | 必填 | 约束 | 说明 |
 |---|---|---|---|---|
-| name | string | true | {"minLength":1,"maxLength":120} | 员工显示名 |
+| name | string / null | true | {} | 姓名；未知时须提供工号 |
 | employee_no | string / null | true | {} | 工号 |
 | department_id | string / null | true | {} | 部门 ID |
 | effective_from | string | true | {"format":"date"} | 部门调整生效日；北京时间 |
@@ -2449,7 +2449,7 @@
 | sdk_version | string | true | {"minLength":1,"maxLength":64} | Pi SDK 版本 |
 | protocol_version | string | true | {"enum":["1.0"]} | 协议版本 |
 | capabilities | array<string> | true | {"maxItems":20} | 客户端能力 |
-| windows_identity | WindowsIdentity | false | {} | 见引用对象 |
+| windows_identity | WindowsIdentity | false | {} | 兼容旧版注册载荷；员工匹配通过注册后的身份接口执行 |
 
 ## RegisterResult
 

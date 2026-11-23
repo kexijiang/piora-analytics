@@ -109,7 +109,7 @@ export function EmployeeTable({
           <tbody>
             {rows.map((employee) => (
               <tr key={employee.id}>
-                <td>{employee.name}</td>
+                <td>{employee.name ?? employee.employee_no}</td>
                 <td className="muted">{employee.employee_no ?? "—"}</td>
                 <td>
                   {departments.find((d) => d.id === employee.department_id)

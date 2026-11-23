@@ -1054,8 +1054,8 @@ export interface components {
              * @description 稳定 UUID，不能使用用户名代替
              */
             id: string;
-            /** @description 员工显示名，允许重名 */
-            name: string;
+            /** @example 示例姓名 */
+            name: string | null;
             employee_no: string | null;
             department_id: string | null;
             /**
@@ -1069,14 +1069,18 @@ export interface components {
             revision: number;
         };
         EmployeeInput: {
-            /** @description 员工显示名 */
-            name: string;
+            /** @example 示例姓名 */
+            name: string | null;
             employee_no: string | null;
             department_id: string | null;
-        };
-        EmployeeUpdate: {
-            /** @description 员工显示名 */
+        } & ({
             name: string;
+        } | {
+            employee_no: string;
+        });
+        EmployeeUpdate: {
+            /** @example 示例姓名 */
+            name: string | null;
             employee_no: string | null;
             department_id: string | null;
             /**
@@ -1086,7 +1090,11 @@ export interface components {
             effective_from: string;
             /** @description 版本 */
             expected_revision: number;
-        };
+        } & ({
+            name: string;
+        } | {
+            employee_no: string;
+        });
         RevisionInput: {
             /** @description 版本 */
             expected_revision: number;
@@ -1197,6 +1205,7 @@ export interface components {
             protocol_version: "1.0";
             /** @description 客户端能力 */
             capabilities: ("desktop_activity" | "query" | "model_usage" | "file_write" | "file_edit")[];
+            /** @description 兼容旧版注册载荷；员工匹配通过注册后的身份接口执行 */
             windows_identity?: components["schemas"]["WindowsIdentity"];
         };
         RegisterResult: {
@@ -4716,7 +4725,7 @@ export interface operations {
                      *       "data": {
                      *         "employee": {
                      *           "id": "10000000-0000-4000-8000-000000000001",
-                     *           "name": "示例值",
+                     *           "name": "示例姓名",
                      *           "employee_no": null,
                      *           "department_id": null,
                      *           "status": "active",
@@ -6122,7 +6131,7 @@ export interface operations {
             content: {
                 /**
                  * @example {
-                 *       "name": "示例值",
+                 *       "name": "示例姓名",
                  *       "employee_no": null,
                  *       "department_id": null
                  *     }
@@ -6141,7 +6150,7 @@ export interface operations {
                      * @example {
                      *       "data": {
                      *         "id": "10000000-0000-4000-8000-000000000001",
-                     *         "name": "示例值",
+                     *         "name": "示例姓名",
                      *         "employee_no": null,
                      *         "department_id": null,
                      *         "status": "active",
@@ -6260,7 +6269,7 @@ export interface operations {
             content: {
                 /**
                  * @example {
-                 *       "name": "示例值",
+                 *       "name": "示例姓名",
                  *       "employee_no": null,
                  *       "department_id": null,
                  *       "effective_from": "2026-11-13",
@@ -6281,7 +6290,7 @@ export interface operations {
                      * @example {
                      *       "data": {
                      *         "id": "10000000-0000-4000-8000-000000000001",
-                     *         "name": "示例值",
+                     *         "name": "示例姓名",
                      *         "employee_no": null,
                      *         "department_id": null,
                      *         "status": "active",

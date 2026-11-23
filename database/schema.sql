@@ -35,21 +35,20 @@ COMMENT ON COLUMN departments.created_at IS '创建时间';
 CREATE TABLE employees (
   id uuid PRIMARY KEY,
   org_id uuid NOT NULL REFERENCES organizations(id),
-  name varchar(120) NOT NULL,
+  name varchar(120),
   employee_no varchar(64),
-  name_is_placeholder boolean NOT NULL DEFAULT false,
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','archived')),
   revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (org_id,id),
-  UNIQUE (org_id,employee_no)
+  UNIQUE (org_id,employee_no),
+  CHECK (name IS NOT NULL OR employee_no IS NOT NULL)
 ) ;
-COMMENT ON TABLE employees IS '管理员确认的人员；用户名不作为主键';
+COMMENT ON TABLE employees IS '通过域工号匹配或人工创建的员工';
 COMMENT ON COLUMN employees.id IS '业务 UUID';
 COMMENT ON COLUMN employees.org_id IS '组织隔离键';
-COMMENT ON COLUMN employees.name IS '显示名';
+COMMENT ON COLUMN employees.name IS '姓名；未知时为空';
 COMMENT ON COLUMN employees.employee_no IS '可选工号';
-COMMENT ON COLUMN employees.name_is_placeholder IS '姓名为自动创建的工号占位';
 COMMENT ON COLUMN employees.status IS '状态';
 COMMENT ON COLUMN employees.revision IS '乐观锁版本';
 COMMENT ON COLUMN employees.created_at IS '创建时间';
@@ -812,7 +811,7 @@ CREATE TABLE installation_identities (
 COMMENT ON TABLE installation_identities IS '客户端身份及最近匹配结果，不代表企业认证';
 COMMENT ON COLUMN installation_identities.org_id IS '组织隔离键';
 COMMENT ON COLUMN installation_identities.installation_id IS '安装';
-COMMENT ON COLUMN installation_identities.claim IS '最近报告的身份；JSON null 表示仅报告注册用户名';
+COMMENT ON COLUMN installation_identities.claim IS '最近通过身份接口报告的身份';
 COMMENT ON COLUMN installation_identities.state IS '最近匹配结果';
 COMMENT ON COLUMN installation_identities.updated_at IS '最近变化';
 

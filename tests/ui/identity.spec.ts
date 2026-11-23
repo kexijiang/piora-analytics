@@ -52,7 +52,7 @@ test("unbound device statistics, empty employee guidance and domain auto matchin
       page.getByRole("heading", { name: "账号自动关联", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText("新上报和历史记录均自动关联员工，无需配置或保存。"),
+      page.getByText("设备可先上传；补报域身份后，历史记录也按员工归属。"),
     ).toBeVisible();
     await expect(page.getByLabel("启用域账号自动关联")).toHaveCount(0);
     await expect(page.getByLabel("不存在时自动创建员工")).toHaveCount(0);
@@ -70,7 +70,6 @@ test("unbound device statistics, empty employee guidance and domain auto matchin
           account_type: "domain",
           domain: "CHINA",
           account_name: "001234",
-          display_name: "合成姓名 Li",
           source: "windows_logon",
         },
       },
@@ -99,14 +98,14 @@ test("unbound device statistics, empty employee guidance and domain auto matchin
     await expect(
       page
         .getByRole("table")
-        .getByText("合成姓名 Li（001234）", { exact: true })
+        .getByText("001234", { exact: true })
         .first(),
     ).toBeVisible();
     await page
       .getByRole("button", { name: "员工每日明细", exact: true })
       .click();
     await expect(
-      page.getByRole("table").getByText("合成姓名 Li", { exact: true }).first(),
+      page.getByRole("table").getByText("001234", { exact: true }).first(),
     ).toBeVisible();
     // An administrator can correct an automatic association in the browser.
     await page.getByRole("button", { name: "组织设置", exact: true }).click();
@@ -125,7 +124,7 @@ test("unbound device statistics, empty employee guidance and domain auto matchin
     await page
       .getByRole("dialog")
       .getByLabel("归属员工")
-      .selectOption({ label: "人工确认员工 ·" });
+      .selectOption({ label: "人工确认员工" });
     await page
       .getByLabel("绑定或纠错原因")
       .fill("合成浏览器验证：人工纠错优先");

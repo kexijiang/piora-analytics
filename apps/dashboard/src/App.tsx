@@ -37,6 +37,7 @@ import {
   Link2,
 } from "lucide-react";
 import type { components } from "../../../packages/contracts/src/api.generated";
+import { employeeLabel } from "./employeeLabel";
 import { api, isDemo } from "./api";
 import { Chart } from "./Chart";
 import { EmployeeTable } from "./EmployeeTable";
@@ -181,15 +182,6 @@ function downloadCSV(rows: S["DailyRow"][]) {
   URL.revokeObjectURL(u);
 }
 
-function employeeLabel(employee?: {
-  name: string;
-  employee_no: string | null;
-}) {
-  if (!employee) return "待确认";
-  return employee.employee_no
-    ? employee.name + "（" + employee.employee_no + "）"
-    : employee.name;
-}
 
 export default function App() {
   const [page, setPage] = useState<Page>("overview"),
@@ -936,7 +928,7 @@ export default function App() {
                   .filter((e) => !dept || e.department_id === dept)
                   .map((e) => (
                     <option key={e.id} value={e.id}>
-                      {e.name}
+                      {e.name ?? e.employee_no}
                     </option>
                   ))}
               </select>
@@ -1316,9 +1308,7 @@ export default function App() {
                               <tr key={q.id}>
                                 <td className="mono">{q.id.slice(-12)}</td>
                                 <td>
-                                  {catalog.employees.find(
-                                    (e) => e.id === q.employee_id,
-                                  )?.name ?? "未绑定"}
+                                  {employeeLabel(catalog.employees.find((e) => e.id === q.employee_id))}
                                 </td>
                                 <td>
                                   {new Date(q.accepted_at).toLocaleString(
@@ -1485,7 +1475,7 @@ export default function App() {
                       <div>
                         <h2>安装实例与同步状态</h2>
                         <p>
-                          域账号和本地账号自动关联员工；身份冲突可由管理员纠错
+                          域账号自动关联员工，本地账号可人工绑定；身份冲突可由管理员纠错
                         </p>
                       </div>
                       <span className="pill">
@@ -1912,10 +1902,10 @@ export default function App() {
               <X size={20} />
             </button>
             <span className="avatar large">
-              {person.employee.name.slice(-2)}
+              {(person.employee.name ?? person.employee.employee_no ?? "").slice(-2)}
             </span>
             <div className="eyebrow">EMPLOYEE INSIGHT</div>
-            <h2>{person.employee.name}</h2>
+            <h2>{person.employee.name ?? person.employee.employee_no}</h2>
             <p className="muted">
               {person.employee.employee_no ?? "未设置工号"} ·{" "}
               {catalog.departments.find(

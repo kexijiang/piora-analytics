@@ -439,7 +439,7 @@
       "data": {
         "employee": {
           "id": "10000000-0000-4000-8000-000000000001",
-          "name": "示例值",
+          "name": "示例姓名",
           "employee_no": null,
           "department_id": null,
           "status": "active",
@@ -752,7 +752,7 @@
     "name": "createEmployee request",
     "schema": "EmployeeInput",
     "value": {
-      "name": "示例值",
+      "name": "示例姓名",
       "employee_no": null,
       "department_id": null
     }
@@ -763,7 +763,7 @@
     "value": {
       "data": {
         "id": "10000000-0000-4000-8000-000000000001",
-        "name": "示例值",
+        "name": "示例姓名",
         "employee_no": null,
         "department_id": null,
         "status": "active",
@@ -780,7 +780,7 @@
     "name": "updateEmployee request",
     "schema": "EmployeeUpdate",
     "value": {
-      "name": "示例值",
+      "name": "示例姓名",
       "employee_no": null,
       "department_id": null,
       "effective_from": "2026-11-13",
@@ -793,7 +793,7 @@
     "value": {
       "data": {
         "id": "10000000-0000-4000-8000-000000000001",
-        "name": "示例值",
+        "name": "示例姓名",
         "employee_no": null,
         "department_id": null,
         "status": "active",

@@ -133,6 +133,10 @@ try {
   const a = reg(identity()),
     b = reg(identity("001234", "OTHER"));
   await Promise.all([register(a), register(a), register(b)]);
+  assert.equal((await get(a)).employee_id, null);
+  assert.equal((await get(b)).identity_status.state, "missing");
+  assert.equal((await db.pool.query("SELECT count(*)::int AS n FROM employees")).rows[0].n, 0);
+  await Promise.all([report(a, a.windows_identity), report(b, b.windows_identity)]);
   assert.equal(
     (
       await db.pool.query(
@@ -145,6 +149,7 @@ try {
   const employee = (
     await db.pool.query("SELECT * FROM employees WHERE org_id=$1", [org])
   ).rows[0];
+  assert.equal(employee.name, null);
   assert.equal(employee.employee_no, "001234");
   assert.equal((await get(a)).employee_id, employee.id);
   assert.equal((await get(b)).identity_status.binding_source, "automatic");
@@ -178,6 +183,16 @@ try {
   assert.equal(await employeeName(), named.display_name);
   await report(a, { ...named, display_name: "Changed" });
   assert.equal(await employeeName(), named.display_name);
+  const updatedEmployee = (await call("GET", "/v1/admin/employees")).json().data.items[0];
+  await call("PATCH", "/v1/admin/employees/" + employee.id, {
+    name: "管理员确认的姓名",
+    employee_no: employee.employee_no,
+    department_id: null,
+    effective_from: dayOf(Date.now()),
+    expected_revision: updatedEmployee.revision,
+  });
+  await report(a, named);
+  assert.equal(await employeeName(), "管理员确认的姓名");
   await report(a, identity());
   const beforeRepeat = await auditCount();
   await Promise.all([report(a, identity()), report(a, identity())]);
@@ -191,7 +206,7 @@ try {
   assert.equal(changed.employee_id, employee.id);
   const other = reg(identity("001234", "OTHER"));
   await register(other);
-  assert.equal((await get(other)).employee_id, employee.id);
+  assert.equal((await get(other)).employee_id, null);
   assert.equal(
     (await report(b, identity("001234", "OTHER"))).json().data.state,
     "matched",
@@ -230,6 +245,9 @@ try {
     },
   );
   await runAggregation(db.pool, 50);
+  const unbound = await loadReport(db.pool, org, { from: historyDay, to: dayOf(Date.now()) });
+  assert.equal(unbound.rows[0].employee_id, null);
+  await report(other, other.windows_identity);
   const historical = await loadReport(db.pool, org, {
     from: historyDay,
     to: dayOf(Date.now()),
@@ -239,7 +257,7 @@ try {
   assert.equal(historical.rows[0].metrics.launches, "1");
   const legacy = { ...reg(), windows_username: "001234" };
   await register(legacy);
-  assert.equal((await get(legacy)).identity_status.state, "matched");
+  assert.equal((await get(legacy)).identity_status.state, "missing");
   assert.equal(
     (await report(legacy, identity())).json().data.employee_id,
     employee.id,
@@ -251,12 +269,15 @@ try {
     source: "windows_logon",
   });
   await register(local);
-  assert.equal((await get(local)).identity_status.state, "matched");
+  await report(local, local.windows_identity);
+  assert.equal((await get(local)).identity_status.state, "local");
   const foreign = reg(identity("001234", "UNCONFIGURED"));
   await register(foreign);
+  await report(foreign, foreign.windows_identity);
   assert.equal((await get(foreign)).identity_status.state, "matched");
   const invalid = reg(identity("not an account"));
   await register(invalid);
+  await report(invalid, invalid.windows_identity);
   assert.equal((await get(invalid)).identity_status.state, "invalid_account");
   const manual = reg({
     account_type: "unknown",
@@ -305,6 +326,7 @@ try {
   ]);
   const archived = reg(identity());
   await register(archived);
+  await report(archived, archived.windows_identity);
   assert.equal(
     (await get(archived)).identity_status.state,
     "employee_archived",
@@ -314,10 +336,12 @@ try {
   ]);
   const missing = reg(identity("333333"));
   await register(missing);
+  await report(missing, missing.windows_identity);
   assert.equal((await get(missing)).identity_status.state, "matched");
   const existing = (await get(missing)).employee_id;
   const cross = reg(identity("333333", "ANY-REGION"));
   await register(cross);
+  await report(cross, cross.windows_identity);
   assert.equal((await get(cross)).employee_id, existing);
   const localFallback = {
     ...reg({
@@ -329,15 +353,9 @@ try {
     windows_username: "local-fixture",
   };
   await register(localFallback);
-  assert.equal((await get(localFallback)).identity_status.state, "matched");
-  assert.equal(
-    (
-      await db.pool.query("SELECT employee_no FROM employees WHERE id=$1", [
-        (await get(localFallback)).employee_id,
-      ])
-    ).rows[0].employee_no,
-    "local-fixture",
-  );
+  await report(localFallback, localFallback.windows_identity);
+  assert.equal((await get(localFallback)).employee_id, null);
+  assert.equal((await get(local)).employee_id, null);
   const unknown = reg({
     account_type: "unknown",
     domain: null,
@@ -345,9 +363,11 @@ try {
     source: "unavailable",
   });
   await register(unknown);
+  await report(unknown, unknown.windows_identity);
   assert.equal((await get(unknown)).identity_status.state, "unknown");
   const mixedCase = reg(identity("AbC007", "china"));
   await register(mixedCase);
+  await report(mixedCase, mixedCase.windows_identity);
   assert.equal(
     (
       await db.pool.query("SELECT employee_no FROM employees WHERE id=$1", [
